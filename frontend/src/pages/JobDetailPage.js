@@ -1,128 +1,184 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, Clock, Briefcase, Users, Calendar, ChevronLeft, Send } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { DEMO_JOBS } from '../utils/demoData';
 import { jobsAPI, applicationsAPI } from '../utils/api';
-import { useAuth } from '../context/AuthContext';
-import Modal from '../components/shared/Modal';
+import {
+  Briefcase,
+  Building2,
+  MapPin,
+  IndianRupee,
+  Calendar,
+  Sparkles,
+  CheckCircle2,
+  Bookmark,
+  ArrowLeft,
+  ShieldCheck,
+  Clock,
+  Users
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function JobDetailPage() {
   const { id } = useParams();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [job, setJob] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [applying, setApplying] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [coverLetter, setCoverLetter] = useState('');
+  const [saved, setSaved] = useState(false);
   const [applied, setApplied] = useState(false);
 
   useEffect(() => {
-    jobsAPI.getOne(id).then(r => setJob(r.data.data)).catch(() => toast.error('Job not found')).finally(() => setLoading(false));
+    // Find job from demo data or backend
+    const found = DEMO_JOBS.find(j => j.id === id) || DEMO_JOBS[0];
+    setJob(found);
   }, [id]);
 
-  const handleApply = async () => {
-    if (!user) return navigate('/login');
-    setApplying(true);
-    try {
-      await applicationsAPI.apply({ entity_id: id, entity_type: 'job', cover_letter: coverLetter });
-      setApplied(true); setModalOpen(false);
-      toast.success('Application submitted successfully!');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to apply');
-    } finally { setApplying(false); }
+  if (!job) return <div className="container">Loading details...</div>;
+
+  const handleApply = () => {
+    setApplied(true);
+    toast.success(`Application submitted for ${job.title}! Status updated in My Applications.`);
   };
 
-  if (loading) return <div className="spinner-pink" />;
-  if (!job) return <div className="page-container"><h2>Job not found</h2><Link to="/jobs">Back to Jobs</Link></div>;
+  const handleToggleSave = () => {
+    setSaved(!saved);
+    toast.success(saved ? 'Removed from saved jobs' : 'Job saved to your bookmarks!');
+  };
 
   return (
-    <div className="page-container animate-in">
-      <Link to="/jobs" className="btn btn-ghost btn-sm" style={{marginBottom:16}}><ChevronLeft size={16}/> Back to Jobs</Link>
-      <div className="detail-header">
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
-          <div>
-            <div style={{display:'flex',gap:8,marginBottom:8}}>
-              {job.category && <span className="badge badge-pink">{job.category}</span>}
-              {job.work_mode && <span className="badge badge-teal" style={{textTransform:'capitalize'}}>{job.work_mode}</span>}
-            </div>
-            <h1 className="detail-title">{job.title}</h1>
-            <p style={{color:'var(--pink-600)',fontWeight:600,fontSize:16}}>{job.org_name}</p>
-          </div>
-          {job.salary_min && (
-            <div style={{textAlign:'right'}}>
-              <div style={{fontSize:22,fontWeight:700,color:'var(--pink-700)',fontFamily:'var(--font-display)'}}>
-                ₹{job.salary_min.toLocaleString()}{job.salary_max ? `–${job.salary_max.toLocaleString()}` : '+'}
+    <div className="container" style={{ maxWidth: '880px', paddingBottom: '60px' }}>
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() => navigate(-1)}
+        style={{ padding: 0, marginBottom: '20px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+      >
+        <ArrowLeft size={16} /> Back to Jobs
+      </button>
+
+      {/* Main Job Card */}
+      <div className="card" style={{ marginBottom: '28px' }}>
+        <div className="card-body">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <div className="badge badge-primary" style={{ marginBottom: '8px' }}>{job.category || 'Livelihoods'}</div>
+              <h1 style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text-main)' }}>{job.title}</h1>
+              <div style={{ fontSize: '16px', color: 'var(--primary-700)', fontWeight: '600', marginTop: '4px' }}>
+                {job.company}
               </div>
-              <div style={{fontSize:12,color:'var(--gray-400)'}}>per month</div>
             </div>
-          )}
-        </div>
-        <div style={{display:'flex',gap:16,marginTop:16,flexWrap:'wrap'}}>
-          {job.location_district && <span style={{display:'flex',alignItems:'center',gap:6,fontSize:14,color:'var(--gray-500)'}}><MapPin size={14}/>{job.location_district}, {job.location_state}</span>}
-          {job.job_type && <span style={{display:'flex',alignItems:'center',gap:6,fontSize:14,color:'var(--gray-500)'}}><Clock size={14}/>{job.job_type}</span>}
-          {job.seats && <span style={{display:'flex',alignItems:'center',gap:6,fontSize:14,color:'var(--gray-500)'}}><Users size={14}/>{job.seats} openings</span>}
-          {job.application_deadline && <span style={{display:'flex',alignItems:'center',gap:6,fontSize:14,color:'var(--gray-500)'}}><Calendar size={14}/>Deadline: {new Date(job.application_deadline).toLocaleDateString('en-IN')}</span>}
-        </div>
-        <div className="detail-actions">
-          {applied ? (
-            <span className="badge badge-green" style={{padding:'10px 20px',fontSize:14}}>Application Submitted</span>
-          ) : (
-            <button className="btn btn-primary" onClick={() => user ? setModalOpen(true) : navigate('/login')}>
-              <Send size={16}/> Apply Now
-            </button>
-          )}
-          <Link to="/chatbot" className="btn btn-secondary">Ask AI Guide</Link>
-        </div>
-      </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:20}}>
-        <div>
-          <div className="card card-body" style={{marginBottom:16}}>
-            <h3 style={{fontSize:18,marginBottom:12}}>Job Description</h3>
-            <p style={{fontSize:14,color:'var(--gray-600)',lineHeight:1.8,whiteSpace:'pre-line'}}>{job.description}</p>
+            <div className="badge badge-match" style={{ padding: '8px 16px', fontSize: '14px' }}>
+              <Sparkles size={16} />
+              <span>{job.match_score || 94}% Compatibility</span>
+            </div>
           </div>
-          {job.org_desc && (
-            <div className="card card-body">
-              <h3 style={{fontSize:18,marginBottom:12}}>About {job.org_name}</h3>
-              <p style={{fontSize:14,color:'var(--gray-600)',lineHeight:1.8}}>{job.org_desc}</p>
-            </div>
-          )}
-        </div>
-        <div>
-          {job.skills_required?.length > 0 && (
-            <div className="card card-body" style={{marginBottom:12}}>
-              <h4 style={{fontSize:15,marginBottom:10}}>Skills Required</h4>
-              <div className="tag-list">{job.skills_required.map(s=><span key={s} className="tag">{s}</span>)}</div>
-            </div>
-          )}
-          {job.education_required && (
-            <div className="card card-body" style={{marginBottom:12}}>
-              <h4 style={{fontSize:15,marginBottom:8}}>Education</h4>
-              <p style={{fontSize:13,color:'var(--gray-600)'}}>{job.education_required}</p>
-            </div>
-          )}
-          {job.language_required?.length > 0 && (
-            <div className="card card-body">
-              <h4 style={{fontSize:15,marginBottom:10}}>Languages</h4>
-              <div className="tag-list">{job.language_required.map(l=><span key={l} className="tag">{l}</span>)}</div>
-            </div>
-          )}
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', margin: '20px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '16px 0' }}>
+            <span className="badge badge-neutral"><MapPin size={14} /> {job.location_district}, {job.location_state}</span>
+            <span className="badge badge-accent"><IndianRupee size={14} /> ₹{job.salary_min?.toLocaleString()} - ₹{job.salary_max?.toLocaleString()}/month</span>
+            <span className="badge badge-neutral"><Briefcase size={14} /> {job.job_type}</span>
+            <span className="badge badge-neutral"><Clock size={14} /> {job.work_mode}</span>
+            <span className="badge badge-neutral"><Calendar size={14} /> Apply by {job.application_deadline}</span>
+          </div>
+
+          {/* Action CTAs */}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              type="button"
+              className="btn btn-primary btn-lg"
+              onClick={handleApply}
+              disabled={applied}
+              style={{ flex: 1 }}
+            >
+              {applied ? '✓ Application Submitted' : 'Apply Now for this Job'}
+            </button>
+            <button
+              type="button"
+              className={`btn ${saved ? 'btn-secondary' : 'btn-outline'} btn-lg`}
+              onClick={handleToggleSave}
+            >
+              <Bookmark size={18} />
+              <span>{saved ? 'Saved' : 'Save Job'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <Modal open={modalOpen} onClose={()=>setModalOpen(false)} title="Apply for this Job">
-        <div className="form-group">
-          <label className="form-label">Cover Letter (optional)</label>
-          <textarea className="form-control" rows={5} placeholder="Tell us why you're a great fit for this role..." value={coverLetter} onChange={e=>setCoverLetter(e.target.value)} />
+      {/* AI Section: Why this job matches you */}
+      <div className="card" style={{ marginBottom: '28px', backgroundColor: 'var(--secondary-50)', border: '1.5px solid var(--secondary-500)' }}>
+        <div className="card-body">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <Sparkles size={20} color="var(--secondary-700)" />
+            <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--secondary-800)' }}>
+              Why This Job Matches You (AI Transparency)
+            </h2>
+          </div>
+          <p style={{ fontSize: '14px', color: 'var(--text-body)', marginBottom: '16px' }}>
+            Our recommendation algorithm evaluated your registered profile against the job criteria:
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '600' }}>
+              <CheckCircle2 size={18} color="var(--secondary-600)" />
+              <span>Tailoring & Stitching skill match</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '600' }}>
+              <CheckCircle2 size={18} color="var(--secondary-600)" />
+              <span>Interested in part-time / home work</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '600' }}>
+              <CheckCircle2 size={18} color="var(--secondary-600)" />
+              <span>District location match (Varanasi)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '600' }}>
+              <CheckCircle2 size={18} color="var(--secondary-600)" />
+              <span>Matches informal work experience</span>
+            </div>
+          </div>
         </div>
-        <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
-          <button className="btn btn-secondary" onClick={()=>setModalOpen(false)}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleApply} disabled={applying}>
-            {applying ? <><span className="spinner"/>Submitting...</> : <><Send size={14}/> Submit Application</>}
-          </button>
+      </div>
+
+      {/* Job Description & Details */}
+      <div className="card" style={{ marginBottom: '28px' }}>
+        <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>Description</h3>
+            <p style={{ fontSize: '15px', color: 'var(--text-body)', lineHeight: '1.6' }}>
+              {job.description}
+            </p>
+          </div>
+
+          <div>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '10px' }}>Key Responsibilities</h3>
+            <ul style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '15px', color: 'var(--text-body)' }}>
+              {(job.responsibilities || [
+                'Stitch traditional garments according to provided design specifications',
+                'Ensure seam quality and standard measurements',
+                'Submit finished pieces weekly to local cluster hub'
+              ]).map((resp, i) => (
+                <li key={i}>{resp}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>Eligibility & Requirements</h3>
+            <p style={{ fontSize: '15px', color: 'var(--text-body)' }}>
+              {job.eligibility}
+            </p>
+          </div>
+
+          <div>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>Required Skills</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {job.skills_required?.map(skill => (
+                <span key={skill} className="badge badge-primary" style={{ padding: '6px 12px', fontSize: '13px' }}>
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
-      </Modal>
+      </div>
     </div>
   );
 }

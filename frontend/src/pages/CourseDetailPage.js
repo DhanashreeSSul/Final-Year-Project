@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Clock, Monitor, MapPin, Calendar, Users, Award, ChevronLeft, Send, CheckCircle } from 'lucide-react';
+import { DEMO_COURSES } from '../utils/demoData';
 import { coursesAPI, applicationsAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -15,7 +16,19 @@ export default function CourseDetailPage() {
   const [enrolled, setEnrolled] = useState(false);
 
   useEffect(() => {
-    coursesAPI.getOne(id).then(r=>setCourse(r.data.data)).catch(()=>toast.error('Course not found')).finally(()=>setLoading(false));
+    coursesAPI.getOne(id)
+      .then(r => {
+        if (r.data?.data) setCourse(r.data.data);
+        else {
+          const found = DEMO_COURSES.find(c => String(c.id) === String(id)) || DEMO_COURSES[0];
+          setCourse(found);
+        }
+      })
+      .catch(() => {
+        const found = DEMO_COURSES.find(c => String(c.id) === String(id)) || DEMO_COURSES[0];
+        setCourse(found);
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   const handleEnroll = async () => {

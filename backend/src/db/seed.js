@@ -1,5 +1,6 @@
 const pool = require('../db/pool');
 const bcrypt = require('bcryptjs');
+const { encryptAadhaar } = require('../utils/security');
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 
 const seed = async () => {
@@ -9,19 +10,22 @@ const seed = async () => {
 
     // Hash for 'password123'
     const hash = await bcrypt.hash('password123', 12);
+    const orgAadhaar = encryptAadhaar('987654321094');
+    const womanAadhaar = encryptAadhaar('567890123458');
 
     // Org user
     const orgUser = await client.query(
-      "INSERT INTO users (name, phone, email, password_hash, role, language_pref, state, district, is_verified) VALUES ('Mahila Vikas Foundation', '9000000001', 'org@shakti.in', $1, 'org', 'en', 'Maharashtra', 'Pune', TRUE) ON CONFLICT (phone) DO UPDATE SET name=EXCLUDED.name RETURNING id",
-      [hash]
+      "INSERT INTO users (name, phone, email, password_hash, role, language_pref, state, district, is_verified, aadhaar_hash, aadhaar_encrypted, aadhaar_last4, is_aadhaar_verified) VALUES ('Mahila Vikas Foundation', '9000000001', 'org@shakti.in', $1, 'org', 'en', 'Maharashtra', 'Pune', TRUE, $2, $3, $4, TRUE) ON CONFLICT (phone) DO UPDATE SET name=EXCLUDED.name, aadhaar_last4=EXCLUDED.aadhaar_last4 RETURNING id",
+      [hash, orgAadhaar.hash, orgAadhaar.encrypted, orgAadhaar.last4]
     );
 
     // Woman user
     const womanUser = await client.query(
-      "INSERT INTO users (name, phone, email, password_hash, role, language_pref, state, district, village, is_verified) VALUES ('Savitri Devi', '9000000002', 'savitri@shakti.in', $1, 'user', 'hi', 'Uttar Pradesh', 'Varanasi', 'Rampur', TRUE) ON CONFLICT (phone) DO UPDATE SET name=EXCLUDED.name RETURNING id",
-      [hash]
+      "INSERT INTO users (name, phone, email, password_hash, role, language_pref, state, district, village, is_verified, aadhaar_hash, aadhaar_encrypted, aadhaar_last4, is_aadhaar_verified) VALUES ('Savitri Devi', '9000000002', 'savitri@shakti.in', $1, 'user', 'hi', 'Uttar Pradesh', 'Varanasi', 'Rampur', TRUE, $2, $3, $4, TRUE) ON CONFLICT (phone) DO UPDATE SET name=EXCLUDED.name, aadhaar_last4=EXCLUDED.aadhaar_last4 RETURNING id",
+      [hash, womanAadhaar.hash, womanAadhaar.encrypted, womanAadhaar.last4]
     );
     await client.query("INSERT INTO user_profiles (user_id, age, education, skills, interests, languages_known, work_experience) VALUES ($1, 28, 'Secondary (Class 9-10)', ARRAY['Sewing','Embroidery','Cooking'], ARRAY['Textile','Agriculture','Social Work'], ARRAY['Hindi','Bhojpuri'], '1-2 years') ON CONFLICT DO NOTHING", [womanUser.rows[0].id]);
+
 
     const orgId = orgUser.rows[0].id;
 

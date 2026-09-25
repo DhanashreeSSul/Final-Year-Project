@@ -1,64 +1,140 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { DEMO_APPLICANTS } from '../utils/demoData';
+import {
+  CheckCircle2,
+  Clock,
+  Briefcase,
+  Building2,
+  Calendar,
+  AlertCircle,
+  Sparkles,
+  ArrowRight
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Briefcase, BookOpen, Heart, Clock } from 'lucide-react';
-import { applicationsAPI } from '../utils/api';
-
-const statusColors = { applied:'#fef3c7|#92400e', shortlisted:'#f3e8ff|#7c3aed', selected:'#dcfce7|#16a34a', rejected:'#fce7f3|#be185d', enrolled:'#ccfbf1|#0f766e' };
-const typeIcons = { job: Briefcase, course: BookOpen, scheme: Heart };
 
 export default function ApplicationsPage() {
-  const [apps, setApps] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('all');
+  const [applications, setApplications] = useState([
+    {
+      id: 'app-1',
+      job_title: 'Tailoring & Stitching Assistant',
+      company: 'Mahila Vikas Foundation',
+      location: 'Varanasi, UP',
+      salary: '₹8,000–₹12,000/mo',
+      applied_date: '02 Sep 2026',
+      status: 'Shortlisted', // Applied, Under Review, Shortlisted, Interview, Selected
+      timeline: [
+        { title: 'Application Submitted', date: '02 Sep 2026', done: true },
+        { title: 'Foundation Viewed Application', date: '03 Sep 2026', done: true },
+        { title: 'Shortlisted for Trial Batch', date: '05 Sep 2026', done: true },
+        { title: 'Practical Skill Trial at Village Center', date: 'Pending', done: false },
+        { title: 'Final Onboarding & Sewing Machine Grant', date: 'Pending', done: false }
+      ]
+    },
+    {
+      id: 'app-2',
+      job_title: 'Handicraft & Crochet Artisan',
+      company: 'Rural Artisans Livelihood Collective',
+      location: 'Varanasi, UP',
+      salary: '₹7,000–₹11,000/mo',
+      applied_date: '03 Sep 2026',
+      status: 'Under Review',
+      timeline: [
+        { title: 'Application Submitted', date: '03 Sep 2026', done: true },
+        { title: 'Foundation Viewed Application', date: '04 Sep 2026', done: true },
+        { title: 'Sample Review by NGO Coordinator', date: 'In Progress', done: false },
+        { title: 'Interview & Work Allocation', date: 'Pending', done: false }
+      ]
+    }
+  ]);
 
-  useEffect(() => {
-    applicationsAPI.getMy().then(r=>setApps(r.data.data)).finally(()=>setLoading(false));
-  }, []);
-
-  const filtered = tab === 'all' ? apps : apps.filter(a=>a.entity_type===tab);
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'Selected':
+        return <span className="badge badge-secondary">Selected</span>;
+      case 'Shortlisted':
+        return <span className="badge badge-match">Shortlisted</span>;
+      case 'Interview':
+        return <span className="badge badge-accent">Interview Scheduled</span>;
+      case 'Under Review':
+        return <span className="badge badge-primary">Under Review</span>;
+      default:
+        return <span className="badge badge-neutral">Applied</span>;
+    }
+  };
 
   return (
-    <div className="page-container animate-in">
+    <div className="container" style={{ maxWidth: '880px', paddingBottom: '60px' }}>
       <div className="page-header">
+        <div className="badge badge-primary" style={{ marginBottom: '10px' }}>
+          <CheckCircle2 size={14} /> Transparent Tracking
+        </div>
         <h1 className="page-title">My Applications</h1>
-        <p className="page-subtitle">Track all your job, course, and scheme applications</p>
+        <p className="page-subtitle">
+          Track the status of your job applications with real-time feedback and clear next steps.
+        </p>
       </div>
-      <div className="tabs">
-        {['all','job','course','scheme'].map(t=>(
-          <button key={t} onClick={()=>setTab(t)} className={`tab-btn ${tab===t?'active':''}`} style={{textTransform:'capitalize'}}>{t==='all'?'All Applications':t+'s'}</button>
-        ))}
-      </div>
-      {loading ? <div className="spinner-pink"/> : filtered.length===0 ? (
-        <div className="card card-body" style={{textAlign:'center',padding:48}}>
-          <p style={{color:'var(--gray-400)'}}>No applications found. Start browsing to apply.</p>
-          <div style={{display:'flex',gap:8,justifyContent:'center',marginTop:16}}>
-            <Link to="/jobs" className="btn btn-primary btn-sm">Browse Jobs</Link>
-            <Link to="/courses" className="btn btn-secondary btn-sm">Find Courses</Link>
+
+      {applications.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <Briefcase size={28} />
           </div>
+          <h3 style={{ fontSize: '18px', fontWeight: '700' }}>You haven't applied to any opportunities yet</h3>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+            Explore jobs recommended for you based on your skills and location.
+          </p>
+          <Link to="/woman/jobs" className="btn btn-primary btn-sm">
+            Browse Recommended Jobs
+          </Link>
         </div>
       ) : (
-        <div style={{display:'flex',flexDirection:'column',gap:10}}>
-          {filtered.map(a => {
-            const Icon = typeIcons[a.entity_type] || Briefcase;
-            const [bg, txt] = (statusColors[a.status]||'#fce7f3|#be185d').split('|');
-            return (
-              <div key={a.id} className="card card-body" style={{display:'flex',alignItems:'center',gap:16}}>
-                <div style={{width:44,height:44,borderRadius:12,background:'var(--pink-50)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                  <Icon size={20} color="var(--pink-600)"/>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {applications.map((app) => (
+            <div key={app.id} className="card">
+              <div className="card-body">
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>{app.job_title}</h3>
+                    <div style={{ fontSize: '14px', color: 'var(--primary-700)', fontWeight: '600', marginTop: '2px' }}>
+                      {app.company} • {app.location}
+                    </div>
+                  </div>
+                  {getStatusBadge(app.status)}
                 </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:600,color:'var(--gray-800)',fontSize:15}}>{a.entity_title||'Untitled'}</div>
-                  <div style={{fontSize:12,color:'var(--gray-400)',marginTop:3,display:'flex',gap:10,alignItems:'center'}}>
-                    <span style={{textTransform:'capitalize'}}>{a.entity_type}</span>
-                    <span style={{display:'flex',alignItems:'center',gap:3}}><Clock size={11}/> {new Date(a.applied_at).toLocaleDateString('en-IN')}</span>
+
+                <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>
+                  <span>Applied on: <strong>{app.applied_date}</strong></span>
+                  <span>Estimated wage: <strong>{app.salary}</strong></span>
+                </div>
+
+                {/* Visual Timeline */}
+                <div style={{ backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', padding: '20px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>
+                    Application Status Timeline
+                  </div>
+
+                  <div className="roadmap-timeline">
+                    {app.timeline.map((step, idx) => (
+                      <div key={idx} className="roadmap-step-item">
+                        <div className={`roadmap-marker ${step.done ? 'completed' : 'active'}`}>
+                          {step.done ? <CheckCircle2 size={16} /> : <Clock size={16} />}
+                        </div>
+                        <div style={{ paddingLeft: '8px' }}>
+                          <div style={{ fontSize: '14px', fontWeight: '700', color: step.done ? 'var(--text-main)' : 'var(--text-muted)' }}>
+                            {step.title}
+                          </div>
+                          <div style={{ fontSize: '12px', color: step.done ? 'var(--secondary-700)' : 'var(--text-light)', marginTop: '2px' }}>
+                            {step.date}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <span style={{padding:'4px 12px',borderRadius:999,fontSize:12,fontWeight:600,background:bg,color:txt,textTransform:'capitalize',flexShrink:0}}>
-                  {a.status}
-                </span>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
     </div>

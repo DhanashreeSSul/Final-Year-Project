@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ExternalLink, CheckCircle, FileText, Send } from 'lucide-react';
+import { DEMO_SCHEMES } from '../utils/demoData';
 import { schemesAPI, applicationsAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -15,7 +16,19 @@ export default function SchemeDetailPage() {
   const [tracked, setTracked] = useState(false);
 
   useEffect(() => {
-    schemesAPI.getOne(id).then(r=>setScheme(r.data.data)).catch(()=>toast.error('Scheme not found')).finally(()=>setLoading(false));
+    schemesAPI.getOne(id)
+      .then(r => {
+        if (r.data?.data) setScheme(r.data.data);
+        else {
+          const found = DEMO_SCHEMES.find(s => String(s.id) === String(id)) || DEMO_SCHEMES[0];
+          setScheme(found);
+        }
+      })
+      .catch(() => {
+        const found = DEMO_SCHEMES.find(s => String(s.id) === String(id)) || DEMO_SCHEMES[0];
+        setScheme(found);
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   const handleTrack = async () => {

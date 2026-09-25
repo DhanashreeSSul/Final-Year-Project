@@ -181,6 +181,13 @@ function scoreScheme(scheme, profile) {
   return Math.min(score, 100);
 }
 
+const {
+  fetchPythonRecs,
+  attachDbIdsForSchemes,
+  attachDbIdsForJobs,
+  attachDbIdsForCourses,
+} = require('../services/recommendationService');
+
 exports.getRecommendations = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -188,7 +195,8 @@ exports.getRecommendations = async (req, res) => {
     // Fetch full profile
     const profileResult = await pool.query(
       `SELECT u.name, u.state, u.district, u.language_pref,
-              p.age, p.education, p.skills, p.interests, p.languages_known, p.work_experience
+              p.age, p.education, p.skills, p.interests, p.languages_known, p.work_experience,
+              p.income, p.gender
        FROM users u
        LEFT JOIN user_profiles p ON p.user_id = u.id
        WHERE u.id = $1`,
@@ -196,7 +204,60 @@ exports.getRecommendations = async (req, res) => {
     );
     const profile = profileResult.rows[0] || {};
 
-    // Fetch candidate pools (more than we'll return so we can rank properly)
+    // Compute profile completeness
+    const completenessFields = {
+      name:       !!(profile.name),
+      state:      !!(profile.state),
+      district:   !!(profile.district),
+      education:  !!(profile.education),
+      experience: !!(profile.work_experience),
+      skills:     Array.isArray(profile.skills) && profile.skills.length > 0,
+      interests:  Array.isArray(profile.interests) && profile.interests.length > 0,
+      language:   Array.isArray(profile.languages_known) && profile.languages_known.length > 0,
+    };
+    const completedCount = Object.values(completenessFields).filter(Boolean).length;
+    const profile_completeness = Math.round((completedCount / Object.keys(completenessFields).length) * 100);
+
+    // 1. Try Python ML Hybrid Recommender
+    const mlPayload = {
+      age: profile.age,
+      gender: profile.gender || 'female',
+      state: profile.state || 'All',
+      district: profile.district,
+      income: profile.income || 150000,
+      skills: profile.skills || [],
+      interests: profile.interests || [],
+      education: profile.education || '',
+    };
+
+    const mlRecs = await fetchPythonRecs('/recommend/all', mlPayload, {
+      top_jobs: 6,
+      top_courses: 6,
+      top_schemes: 5
+    });
+
+    if (mlRecs && mlRecs.jobs && mlRecs.courses && mlRecs.schemes) {
+      const [jobsWithIds, coursesWithIds, schemesWithIds] = await Promise.all([
+        attachDbIdsForJobs(mlRecs.jobs),
+        attachDbIdsForCourses(mlRecs.courses),
+        attachDbIdsForSchemes(mlRecs.schemes),
+      ]);
+
+      return res.json({
+        success: true,
+        source: 'ml_engine',
+        data: {
+          jobs: jobsWithIds,
+          courses: coursesWithIds,
+          schemes: schemesWithIds,
+          profile_completeness,
+          profile_tips: buildProfileTips(completenessFields),
+          has_profile: completedCount >= 3,
+        }
+      });
+    }
+
+    // 2. Resilient Database Fallback if ML service is offline
     const [jobsResult, coursesResult, schemesResult] = await Promise.all([
       pool.query(
         `SELECT j.*, o.org_name, o.logo_url, 'job' as type
@@ -222,7 +283,6 @@ exports.getRecommendations = async (req, res) => {
       ),
     ]);
 
-    // Score & rank
     const scoredJobs = jobsResult.rows
       .map(job => ({ ...job, score: scoreJob(job, profile) }))
       .sort((a, b) => b.score - a.score)
@@ -238,21 +298,6 @@ exports.getRecommendations = async (req, res) => {
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
 
-    // Compute profile completeness
-    const completenessFields = {
-      name:       !!(profile.name),
-      state:      !!(profile.state),
-      district:   !!(profile.district),
-      education:  !!(profile.education),
-      experience: !!(profile.work_experience),
-      skills:     Array.isArray(profile.skills) && profile.skills.length > 0,
-      interests:  Array.isArray(profile.interests) && profile.interests.length > 0,
-      language:   Array.isArray(profile.languages_known) && profile.languages_known.length > 0,
-    };
-    const completedCount = Object.values(completenessFields).filter(Boolean).length;
-    const profile_completeness = Math.round((completedCount / Object.keys(completenessFields).length) * 100);
-
-    // Build match reasons for UI
     const jobsWithReasons = scoredJobs.map(j => ({
       ...j,
       match_reason: buildJobMatchReason(j, profile),
@@ -262,10 +307,11 @@ exports.getRecommendations = async (req, res) => {
       match_reason: buildCourseMatchReason(c, profile),
     }));
 
-    res.json({
+    return res.json({
       success: true,
+      source: 'database_fallback',
       data: {
-        jobs:    jobsWithReasons,
+        jobs: jobsWithReasons,
         courses: coursesWithReasons,
         schemes: scoredSchemes,
         profile_completeness,
@@ -278,6 +324,7 @@ exports.getRecommendations = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 function buildJobMatchReason(job, profile) {
   const reasons = [];
@@ -321,11 +368,28 @@ exports.getJobRecommendations = async (req, res) => {
     const { limit = 8 } = req.query;
 
     const profileResult = await pool.query(
-      `SELECT u.state, u.district, p.skills, p.interests, p.education, p.languages_known
+      `SELECT u.state, u.district, p.skills, p.interests, p.education, p.languages_known, p.age, p.income, p.gender
        FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id WHERE u.id = $1`,
       [userId]
     );
     const profile = profileResult.rows[0] || {};
+
+    const mlPayload = {
+      age: profile.age,
+      gender: profile.gender || 'female',
+      state: profile.state || 'All',
+      district: profile.district,
+      income: profile.income || 150000,
+      skills: profile.skills || [],
+      interests: profile.interests || [],
+      education: profile.education || '',
+    };
+
+    const mlJobs = await fetchPythonRecs('/recommend/jobs', mlPayload, { limit });
+    if (mlJobs && Array.isArray(mlJobs)) {
+      const jobsWithIds = await attachDbIdsForJobs(mlJobs);
+      return res.json({ success: true, source: 'ml_engine', data: jobsWithIds, total: jobsWithIds.length });
+    }
 
     const jobsResult = await pool.query(
       `SELECT j.*, o.org_name, o.logo_url FROM jobs j
@@ -338,7 +402,7 @@ exports.getJobRecommendations = async (req, res) => {
       .sort((a, b) => b.score - a.score)
       .slice(0, parseInt(limit));
 
-    res.json({ success: true, data: ranked, total: ranked.length });
+    res.json({ success: true, source: 'database_fallback', data: ranked, total: ranked.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -353,11 +417,26 @@ exports.getCourseRecommendations = async (req, res) => {
     const { limit = 8 } = req.query;
 
     const profileResult = await pool.query(
-      `SELECT u.state, u.district, u.language_pref, p.skills, p.interests, p.education, p.languages_known
+      `SELECT u.state, u.district, u.language_pref, p.skills, p.interests, p.education, p.languages_known, p.age, p.gender
        FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id WHERE u.id = $1`,
       [userId]
     );
     const profile = profileResult.rows[0] || {};
+
+    const mlPayload = {
+      age: profile.age,
+      gender: profile.gender || 'female',
+      state: profile.state || 'All',
+      skills: profile.skills || [],
+      interests: profile.interests || [],
+      education: profile.education || '',
+    };
+
+    const mlCourses = await fetchPythonRecs('/recommend/courses', mlPayload, { limit });
+    if (mlCourses && Array.isArray(mlCourses)) {
+      const coursesWithIds = await attachDbIdsForCourses(mlCourses);
+      return res.json({ success: true, source: 'ml_engine', data: coursesWithIds, total: coursesWithIds.length });
+    }
 
     const coursesResult = await pool.query(
       `SELECT c.*, o.org_name, o.logo_url FROM courses c
@@ -370,11 +449,58 @@ exports.getCourseRecommendations = async (req, res) => {
       .sort((a, b) => b.score - a.score)
       .slice(0, parseInt(limit));
 
-    res.json({ success: true, data: ranked, total: ranked.length });
+    res.json({ success: true, source: 'database_fallback', data: ranked, total: ranked.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+/**
+ * GET /api/recommendations/schemes — standalone scheme recommendations endpoint
+ */
+exports.getSchemeRecommendations = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { limit = 10, fully_eligible = 'false' } = req.query;
+
+    const profileResult = await pool.query(
+      `SELECT u.state, u.district, u.language_pref, p.skills, p.interests, p.education, p.age, p.income, p.gender
+       FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id WHERE u.id = $1`,
+      [userId]
+    );
+    const profile = profileResult.rows[0] || {};
+
+    const mlPayload = {
+      age: profile.age,
+      gender: profile.gender || 'female',
+      state: profile.state || 'All',
+      district: profile.district,
+      income: profile.income || 150000,
+      skills: profile.skills || [],
+      interests: profile.interests || [],
+    };
+
+    const mlSchemes = await fetchPythonRecs('/recommend/schemes', mlPayload, { limit, fully_eligible });
+    if (mlSchemes && Array.isArray(mlSchemes)) {
+      const schemesWithIds = await attachDbIdsForSchemes(mlSchemes);
+      return res.json({ success: true, source: 'ml_engine', data: schemesWithIds, total: schemesWithIds.length });
+    }
+
+    const schemesResult = await pool.query(
+      `SELECT *, 'scheme' as type FROM schemes WHERE is_active = TRUE ORDER BY created_at DESC LIMIT 100`
+    );
+
+    const ranked = schemesResult.rows
+      .map(s => ({ ...s, score: scoreScheme(s, profile) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, parseInt(limit));
+
+    res.json({ success: true, source: 'database_fallback', data: ranked, total: ranked.length });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 
 /**
  * POST /api/recommendations/feedback — record implicit feedback (click / apply)

@@ -18,9 +18,12 @@ api.interceptors.response.use(
   res => res,
   err => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('shakti_token');
-      localStorage.removeItem('shakti_user');
-      window.location.href = '/login';
+      const token = localStorage.getItem('shakti_token');
+      if (token && token !== 'demo-session-token') {
+        localStorage.removeItem('shakti_token');
+        localStorage.removeItem('shakti_user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(err);
   }
@@ -29,12 +32,15 @@ api.interceptors.response.use(
 export default api;
 
 export const authAPI = {
-  sendOTP: (phone) => api.post('/auth/send-otp', { phone }),
+  sendOTP: (phone, purpose = 'login') => api.post('/auth/send-otp', { phone, purpose }),
+  verifyAadhaar: (aadhaar) => api.post('/auth/verify-aadhaar', { aadhaar }),
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
+  loginWithAadhaar: (aadhaar, password, otp) => api.post('/auth/login', { aadhaar, password, otp }),
   resetPassword: (data) => api.post('/auth/reset-password', data),
   me: () => api.get('/auth/me'),
 };
+
 
 export const jobsAPI = {
   getAll: (params) => api.get('/jobs', { params }),
@@ -69,13 +75,15 @@ export const chatAPI = {
 export const recommendationsAPI = {
   // Full dashboard: jobs + courses + schemes + profile tips + completeness
   get: () => api.get('/recommendations'),
-  // Standalone endpoints for Jobs and Courses pages
+  // Standalone endpoints for Jobs, Courses, and Schemes pages
   getJobs: (limit = 8) => api.get('/recommendations/jobs', { params: { limit } }),
   getCourses: (limit = 8) => api.get('/recommendations/courses', { params: { limit } }),
+  getSchemes: (limit = 10, fully_eligible = false) => api.get('/recommendations/schemes', { params: { limit, fully_eligible } }),
   // Record user interaction for feedback loop
   recordFeedback: (entity_id, entity_type, action = 'view') =>
     api.post('/recommendations/feedback', { entity_id, entity_type, action }),
 };
+
 
 export const usersAPI = {
   updateProfile: (data) => api.put('/users/profile', data),

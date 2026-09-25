@@ -1,173 +1,213 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Award, Clock, Monitor } from 'lucide-react';
-import { coursesAPI } from '../utils/api';
-import Modal from '../components/shared/Modal';
+import React, { useState } from 'react';
+import { DEMO_COURSES } from '../utils/demoData';
+import {
+  GraduationCap,
+  PlusCircle,
+  Clock,
+  Award,
+  Users,
+  Calendar,
+  CheckCircle2,
+  Trash2
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const CATS = ['Digital Literacy','Tailoring','Agriculture','Healthcare','Finance','IT','Handicrafts','Education','Other'];
-const SKILLS = ['Sewing','Computer Basics','MS Office','Digital Marketing','Accounting','Mobile Banking','Farming','Cooking','Photography','Data Entry','Teaching','Healthcare'];
-const LANGS = ['English','Hindi','Marathi','Telugu','Tamil','Kannada','Gujarati','Bengali'];
-const STATES = ['Andhra Pradesh','Bihar','Gujarat','Karnataka','Maharashtra','Rajasthan','Tamil Nadu','Telangana','Uttar Pradesh','West Bengal'];
-
-const emptyCourse = { title:'', description:'', duration:'', mode:'online', language:[], skills_taught:[], certification:false, is_free:true, fee:0, location_state:'', location_district:'', start_date:'', end_date:'', seats:'', category:'' };
-
 export default function OrgCoursesPage() {
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState(emptyCourse);
-  const [saving, setSaving] = useState(false);
+  const [courses, setCourses] = useState(DEMO_COURSES);
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    duration: '4 Weeks',
+    mode: 'Hybrid (Village Hub + Video Lessons)',
+    skills_taught: '',
+    seats: 30,
+    description: ''
+  });
 
-  const fetchCourses = useCallback(async () => {
-    try {
-      const res = await coursesAPI.getAll({ limit: 50 });
-      setCourses(res.data.data);
-    } catch { toast.error('Failed to load'); }
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { fetchCourses(); }, [fetchCourses]);
-
-  const handleSave = async () => {
-    if (!form.title || !form.description) return toast.error('Title and description required');
-    setSaving(true);
-    try {
-      await coursesAPI.create(form);
-      toast.success('Course created!');
-      setModalOpen(false); fetchCourses();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
-    finally { setSaving(false); }
+  const handleCreate = (e) => {
+    e.preventDefault();
+    const newCourse = {
+      id: `course-${Date.now()}`,
+      title: formData.title,
+      provider: 'Mahila Vikas Foundation',
+      duration: formData.duration,
+      mode: formData.mode,
+      skills_taught: formData.skills_taught.split(',').map(s => s.trim()),
+      certification: true,
+      is_free: true,
+      description: formData.description,
+      seats: Number(formData.seats)
+    };
+    setCourses([newCourse, ...courses]);
+    setShowModal(false);
+    toast.success('Training program published to rural women network!');
   };
 
-  const toggleArr = (key, val) => setForm(p=>({ ...p, [key]: (p[key]||[]).includes(val) ? (p[key]||[]).filter(x=>x!==val) : [...(p[key]||[]),val] }));
-  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+  const handleDelete = (id) => {
+    setCourses(courses.filter(c => c.id !== id));
+    toast.success('Program archived.');
+  };
 
   return (
-    <div className="page-container animate-in">
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
-        <div><h1 className="page-title">Training Courses</h1><p className="page-subtitle">Manage your skill development programs</p></div>
-        <button className="btn btn-primary" onClick={()=>{setForm(emptyCourse);setModalOpen(true);}}><Plus size={15}/> Add Course</button>
+    <div className="container" style={{ paddingBottom: '60px' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <div className="badge badge-secondary" style={{ marginBottom: '8px' }}>
+            <GraduationCap size={14} /> Vocational Skilling Hub
+          </div>
+          <h1 className="page-title">Manage Training Programs</h1>
+          <p className="page-subtitle">Publish certified skilling batches for rural women in your district.</p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => setShowModal(true)}
+        >
+          <PlusCircle size={18} />
+          <span>Post Training Program</span>
+        </button>
       </div>
 
-      {loading ? <div className="spinner-pink"/> : courses.length===0 ? (
-        <div className="card card-body" style={{textAlign:'center',padding:48}}>
-          <p style={{color:'var(--gray-400)',marginBottom:16}}>No courses yet. Create your first training program.</p>
-          <button className="btn btn-primary" onClick={()=>setModalOpen(true)}><Plus size={14}/> Create Course</button>
-        </div>
-      ) : (
-        <div className="grid grid-2">
-          {courses.map(c=>(
-            <div key={c.id} className="card">
-              <div style={{height:5,background:'linear-gradient(90deg,var(--pink-400),var(--purple-500))',borderRadius:'var(--radius-lg) var(--radius-lg) 0 0'}}/>
-              <div className="card-body">
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                  <span className="badge badge-pink">{c.category||'Course'}</span>
-                  <div style={{display:'flex',gap:4}}>
-                    {c.is_free && <span className="badge badge-green">Free</span>}
-                    {c.certification && <span className="badge badge-purple"><Award size={10}/> Cert</span>}
-                  </div>
-                </div>
-                <div style={{fontWeight:600,fontSize:15,color:'var(--gray-800)',marginBottom:4}}>{c.title}</div>
-                <p style={{fontSize:13,color:'var(--gray-400)',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{c.description}</p>
-                <div style={{display:'flex',gap:10,marginTop:10,fontSize:12,color:'var(--gray-500)'}}>
-                  {c.duration && <span style={{display:'flex',alignItems:'center',gap:3}}><Clock size={11}/>{c.duration}</span>}
-                  {c.mode && <span style={{display:'flex',alignItems:'center',gap:3}}><Monitor size={11}/>{c.mode}</span>}
-                </div>
+      <div className="grid-2">
+        {courses.map((course) => (
+          <div key={course.id} className="card">
+            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{course.title}</h3>
+                <span className="badge badge-secondary">Active</span>
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text-light)', marginBottom: '10px' }}>Provider: {course.provider}</div>
+
+              <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: '1.5' }}>
+                {course.description}
+              </p>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+                {course.skills_taught?.map(s => (
+                  <span key={s} className="badge badge-primary">{s}</span>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                <span><Clock size={13} style={{ display: 'inline' }} /> {course.duration}</span>
+                <span><Users size={13} style={{ display: 'inline' }} /> {course.seats || 30} Seats</span>
+              </div>
+
+              <div style={{ marginTop: 'auto', display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  style={{ flex: 1 }}
+                  onClick={() => toast.success('Viewing enrolled batch list...')}
+                >
+                  View Enrolled (18)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => handleDelete(course.id)}
+                  style={{ color: 'var(--text-light)' }}
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             </div>
-          ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Post Modal */}
+      {showModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div className="card" style={{ maxWidth: '580px', width: '100%', padding: '28px', backgroundColor: '#ffffff' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '16px' }}>
+              Publish New Vocational Program
+            </h2>
+
+            <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="form-group">
+                <label className="form-label">Course Title</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. Advanced Blouse Design & Quality Finishing"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Description</label>
+                <textarea
+                  className="form-control"
+                  placeholder="Describe the training schedule and materials provided..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Skills Taught (Comma-separated)</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. Sewing Machine, Pattern Making, Pricing"
+                  value={formData.skills_taught}
+                  onChange={(e) => setFormData({ ...formData, skills_taught: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">Duration</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={formData.duration}
+                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Batch Seats</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    value={formData.seats}
+                    onChange={(e) => setFormData({ ...formData, seats: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)} style={{ flex: 1 }}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                  Publish Program
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
-
-      <Modal open={modalOpen} onClose={()=>setModalOpen(false)} title="Create Training Course">
-        <div style={{display:'flex',flexDirection:'column',gap:14}}>
-          <div className="form-group" style={{marginBottom:0}}>
-            <label className="form-label">Course Title *</label>
-            <input className="form-control" value={form.title} onChange={e=>upd('title',e.target.value)} placeholder="e.g. Basic Computer Skills"/>
-          </div>
-          <div className="form-group" style={{marginBottom:0}}>
-            <label className="form-label">Description *</label>
-            <textarea className="form-control" value={form.description} onChange={e=>upd('description',e.target.value)} rows={3} placeholder="What will participants learn?"/>
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">Category</label>
-              <select className="form-control" value={form.category} onChange={e=>upd('category',e.target.value)}>
-                <option value="">Select</option>{CATS.map(c=><option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">Mode</label>
-              <select className="form-control" value={form.mode} onChange={e=>upd('mode',e.target.value)}>
-                {['online','offline','hybrid'].map(m=><option key={m} style={{textTransform:'capitalize'}}>{m}</option>)}
-              </select>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">Duration</label>
-              <input className="form-control" value={form.duration} onChange={e=>upd('duration',e.target.value)} placeholder="e.g. 4 weeks, 3 months"/>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">Seats Available</label>
-              <input className="form-control" type="number" value={form.seats} onChange={e=>upd('seats',e.target.value)} placeholder="e.g. 20"/>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">Start Date</label>
-              <input className="form-control" type="date" value={form.start_date} onChange={e=>upd('start_date',e.target.value)}/>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">End Date</label>
-              <input className="form-control" type="date" value={form.end_date} onChange={e=>upd('end_date',e.target.value)}/>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">State</label>
-              <select className="form-control" value={form.location_state} onChange={e=>upd('location_state',e.target.value)}>
-                <option value="">Select</option>{STATES.map(s=><option key={s}>{s}</option>)}
-              </select>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">District</label>
-              <input className="form-control" value={form.location_district} onChange={e=>upd('location_district',e.target.value)} placeholder="District"/>
-            </div>
-          </div>
-          <div style={{display:'flex',gap:16}}>
-            <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:14}}>
-              <input type="checkbox" checked={form.is_free} onChange={e=>upd('is_free',e.target.checked)} style={{accentColor:'var(--pink-600)',width:16,height:16}}/>
-              Free Course
-            </label>
-            {!form.is_free && <div style={{flex:1}}><input className="form-control" type="number" value={form.fee} onChange={e=>upd('fee',e.target.value)} placeholder="Fee in ₹"/></div>}
-            <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:14}}>
-              <input type="checkbox" checked={form.certification} onChange={e=>upd('certification',e.target.checked)} style={{accentColor:'var(--pink-600)',width:16,height:16}}/>
-              Provides Certificate
-            </label>
-          </div>
-          <div className="form-group" style={{marginBottom:0}}>
-            <label className="form-label">Skills Taught</label>
-            <div className="tag-list">
-              {SKILLS.map(s=>(
-                <button key={s} type="button" onClick={()=>toggleArr('skills_taught',s)} style={{padding:'4px 10px',borderRadius:999,fontSize:12,cursor:'pointer',border:'1.5px solid',background:(form.skills_taught||[]).includes(s)?'var(--pink-600)':'white',color:(form.skills_taught||[]).includes(s)?'white':'var(--pink-600)',borderColor:'var(--pink-200)'}}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="form-group" style={{marginBottom:0}}>
-            <label className="form-label">Languages Available</label>
-            <div className="tag-list">
-              {LANGS.map(l=>(
-                <button key={l} type="button" onClick={()=>toggleArr('language',l)} style={{padding:'4px 10px',borderRadius:999,fontSize:12,cursor:'pointer',border:'1.5px solid',background:(form.language||[]).includes(l)?'var(--purple-500)':'white',color:(form.language||[]).includes(l)?'white':'var(--purple-500)',borderColor:'#e9d5ff'}}>
-                  {l}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
-            <button className="btn btn-secondary" onClick={()=>setModalOpen(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving?<><span className="spinner"/>Saving...</>:'Create Course'}
-            </button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }

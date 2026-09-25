@@ -7,9 +7,10 @@ exports.getSchemes = async (req, res) => {
     let conditions = ['is_active = TRUE'];
     let params = [];
     let idx = 1;
-    if (state) { conditions.push(`(state = $${idx} OR state = 'All')`); params.push(state); idx++; }
-    if (category) { conditions.push(`category = $${idx++}`); params.push(category); }
-    if (search) { conditions.push(`(title ILIKE $${idx} OR description ILIKE $${idx++})`); params.push(`%${search}%`); }
+    if (state && state !== 'All') { conditions.push(`(state ILIKE $${idx} OR state = 'All' OR eligibility_state ILIKE $${idx})`); params.push(`%${state}%`); idx++; }
+    if (category && category !== 'All') { conditions.push(`category ILIKE $${idx++}`); params.push(`%${category}%`); }
+    if (search) { conditions.push(`(title ILIKE $${idx} OR description ILIKE $${idx} OR ministry ILIKE $${idx++})`); params.push(`%${search}%`); }
+
     const where = 'WHERE ' + conditions.join(' AND ');
     const countResult = await pool.query(`SELECT COUNT(*) FROM schemes ${where}`, params);
     params.push(limit, offset);

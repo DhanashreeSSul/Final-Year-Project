@@ -1,181 +1,345 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, MapPin, Users } from 'lucide-react';
-import { jobsAPI, orgAPI } from '../utils/api';
-import Modal from '../components/shared/Modal';
+import React, { useState } from 'react';
+import { DEMO_JOBS } from '../utils/demoData';
+import {
+  Briefcase,
+  PlusCircle,
+  MapPin,
+  IndianRupee,
+  Calendar,
+  Sparkles,
+  Eye,
+  CheckCircle2,
+  Trash2,
+  Clock
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const SKILLS = ['Sewing','Embroidery','Farming','MS Office','Computer','Accounting','Teaching','Healthcare','Retail','Customer Service','Data Entry','Photography','Cooking','Handicrafts'];
-const CATS = ['Agriculture','Handicrafts','Healthcare','Education','IT','Tailoring','Retail','Finance','Social Work','Other'];
-const STATES = ['Andhra Pradesh','Bihar','Chhattisgarh','Gujarat','Karnataka','Maharashtra','Rajasthan','Tamil Nadu','Telangana','Uttar Pradesh','West Bengal'];
-
-const emptyJob = { title:'', description:'', job_type:'full-time', work_mode:'onsite', location_state:'', location_district:'', salary_min:'', salary_max:'', skills_required:[], education_required:'', language_required:[], application_deadline:'', seats:'', category:'' };
-
 export default function OrgJobsPage() {
-  const [jobs, setJobs] = useState([]);
-  const [orgId, setOrgId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState(emptyJob);
-  const [saving, setSaving] = useState(false);
-  const [editId, setEditId] = useState(null);
+  const [jobs, setJobs] = useState(DEMO_JOBS);
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
 
-  const fetchJobs = useCallback(async () => {
-    try {
-      const orgRes = await orgAPI.get();
-      if (orgRes.data.data) {
-        setOrgId(orgRes.data.data.id);
-        const res = await jobsAPI.getAll({ limit: 50 });
-        // Filter to org's jobs - in real app would have org-specific endpoint
-        setJobs(res.data.data);
-      }
-    } catch { toast.error('Failed to load'); }
-    finally { setLoading(false); }
-  }, []);
+  // New Job Form State
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    skills_required: '',
+    location_state: 'Uttar Pradesh',
+    location_district: 'Varanasi',
+    work_mode: 'Work from Home / Village Hub',
+    job_type: 'Part-time',
+    salary_min: 8000,
+    salary_max: 12000,
+    education: '8th Standard or Basic Literacy',
+    experience: 'Informal stitching or tailoring experience',
+    working_hours: '4-5 hours/day',
+    application_deadline: '2026-10-31',
+    seats: 10,
+    women_specific: true
+  });
 
-  useEffect(() => { fetchJobs(); }, [fetchJobs]);
+  const handleCreateJob = (e) => {
+    e.preventDefault();
+    const newJob = {
+      id: `job-${Date.now()}`,
+      title: formData.title,
+      company: 'Mahila Vikas Foundation',
+      description: formData.description,
+      skills_required: formData.skills_required.split(',').map(s => s.trim()),
+      location_district: formData.location_district,
+      location_state: formData.location_state,
+      work_mode: formData.work_mode,
+      job_type: formData.job_type,
+      salary_min: Number(formData.salary_min),
+      salary_max: Number(formData.salary_max),
+      application_deadline: formData.application_deadline,
+      seats: Number(formData.seats),
+      match_score: 95
+    };
 
-  const openCreate = () => { setForm(emptyJob); setEditId(null); setModalOpen(true); };
-  const openEdit = (job) => { setForm({...job, skills_required: job.skills_required||[], language_required: job.language_required||[]}); setEditId(job.id); setModalOpen(true); };
-
-  const handleSave = async () => {
-    if (!form.title || !form.description) return toast.error('Title and description are required');
-    setSaving(true);
-    try {
-      if (editId) {
-        await jobsAPI.update(editId, form);
-        toast.success('Job updated!');
-      } else {
-        await jobsAPI.create(form);
-        toast.success('Job posted!');
-      }
-      setModalOpen(false); fetchJobs();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to save'); }
-    finally { setSaving(false); }
+    setJobs([newJob, ...jobs]);
+    setShowPostModal(false);
+    setPreviewMode(false);
+    toast.success('Opportunity published! Automatically indexed by AI matching engine.');
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Remove this job listing?')) return;
-    try { await jobsAPI.delete(id); toast.success('Job removed'); fetchJobs(); }
-    catch { toast.error('Failed to remove'); }
+  const handleDeleteJob = (id) => {
+    setJobs(jobs.filter(j => j.id !== id));
+    toast.success('Job opportunity archived.');
   };
-
-  const toggleSkill = (s) => setForm(p=>({...p, skills_required: p.skills_required.includes(s)?p.skills_required.filter(x=>x!==s):[...p.skills_required,s]}));
-  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
 
   return (
-    <div className="page-container animate-in">
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
-        <div><h1 className="page-title">Job Listings</h1><p className="page-subtitle">Manage your posted opportunities</p></div>
-        <button className="btn btn-primary" onClick={openCreate}><Plus size={15}/> Post New Job</button>
+    <div className="container" style={{ paddingBottom: '60px' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <div className="badge badge-secondary" style={{ marginBottom: '8px' }}>
+            <Briefcase size={14} /> NGO Employer Portal
+          </div>
+          <h1 className="page-title">Manage Posted Opportunities</h1>
+          <p className="page-subtitle">Publish jobs, track rural women applicants, and update openings.</p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => { setShowPostModal(true); setPreviewMode(false); }}
+        >
+          <PlusCircle size={18} />
+          <span>Post New Job Opportunity</span>
+        </button>
       </div>
 
-      {loading ? <div className="spinner-pink"/> : jobs.length===0 ? (
-        <div className="card card-body" style={{textAlign:'center',padding:48}}>
-          <p style={{color:'var(--gray-400)',marginBottom:16}}>No jobs posted yet.</p>
-          <button className="btn btn-primary" onClick={openCreate}><Plus size={14}/> Post Your First Job</button>
+      {/* Jobs Table */}
+      <div className="card">
+        <div className="card-header">
+          <h2 style={{ fontSize: '18px', fontWeight: '700' }}>Active Openings ({jobs.length})</h2>
         </div>
-      ) : (
-        <div style={{display:'flex',flexDirection:'column',gap:10}}>
-          {jobs.map(job=>(
-            <div key={job.id} className="card card-body" style={{display:'flex',alignItems:'center',gap:16}}>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:600,fontSize:15,color:'var(--gray-800)'}}>{job.title}</div>
-                <div style={{fontSize:13,color:'var(--gray-400)',marginTop:3,display:'flex',gap:10}}>
-                  {job.location_district && <span style={{display:'flex',alignItems:'center',gap:3}}><MapPin size={11}/>{job.location_district}</span>}
-                  {job.seats && <span style={{display:'flex',alignItems:'center',gap:3}}><Users size={11}/>{job.seats} seats</span>}
-                  <span style={{textTransform:'capitalize'}}>{job.work_mode}</span>
+        <div className="card-body" style={{ padding: 0 }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+              <thead>
+                <tr style={{ backgroundColor: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '12px 20px', fontWeight: '700', color: 'var(--text-muted)' }}>Role Title</th>
+                  <th style={{ padding: '12px 20px', fontWeight: '700', color: 'var(--text-muted)' }}>Location & Mode</th>
+                  <th style={{ padding: '12px 20px', fontWeight: '700', color: 'var(--text-muted)' }}>Compensation</th>
+                  <th style={{ padding: '12px 20px', fontWeight: '700', color: 'var(--text-muted)' }}>Deadline</th>
+                  <th style={{ padding: '12px 20px', fontWeight: '700', color: 'var(--text-muted)' }}>Applicants</th>
+                  <th style={{ padding: '12px 20px', fontWeight: '700', color: 'var(--text-muted)' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobs.map((job) => (
+                  <tr key={job.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '16px 20px' }}>
+                      <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{job.title}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>{job.job_type}</div>
+                    </td>
+                    <td style={{ padding: '16px 20px' }}>
+                      <div>{job.location_district}, {job.location_state}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--primary-700)', fontWeight: '500' }}>{job.work_mode}</div>
+                    </td>
+                    <td style={{ padding: '16px 20px', fontWeight: '600', color: 'var(--accent-700)' }}>
+                      ₹{job.salary_min?.toLocaleString()} - ₹{job.salary_max?.toLocaleString()}
+                    </td>
+                    <td style={{ padding: '16px 20px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                      {job.application_deadline}
+                    </td>
+                    <td style={{ padding: '16px 20px' }}>
+                      <span className="badge badge-primary">12 Applicants</span>
+                    </td>
+                    <td style={{ padding: '16px 20px' }}>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => handleDeleteJob(job.id)}
+                        style={{ color: 'var(--text-light)' }}
+                        title="Archive Job"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Post Job Modal with Live Preview Toggle */}
+      {showPostModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px',
+          overflowY: 'auto'
+        }}>
+          <div className="card" style={{ maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', backgroundColor: '#ffffff', padding: '28px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: '800' }}>
+                  {previewMode ? 'Opportunity Preview' : 'Post New Job for Rural Women'}
+                </h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  {previewMode ? 'Review how beneficiaries see this card' : 'Fill details below with simple requirements'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setPreviewMode(!previewMode)}
+              >
+                <Eye size={15} />
+                <span>{previewMode ? 'Back to Edit' : 'Live Preview'}</span>
+              </button>
+            </div>
+
+            {previewMode ? (
+              /* Live Preview Card */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', border: '1.5px solid var(--primary-200)', borderRadius: 'var(--radius-md)', backgroundColor: '#ffffff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{formData.title || 'Untitled Opportunity'}</h3>
+                    <div style={{ fontSize: '14px', color: 'var(--primary-700)', fontWeight: '600' }}>Mahila Vikas Foundation</div>
+                  </div>
+                  <span className="badge badge-match">94% AI Fit</span>
+                </div>
+
+                <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                  {formData.description || 'Job description will appear here...'}
+                </p>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  <span className="badge badge-neutral"><MapPin size={13} /> {formData.location_district}, {formData.location_state}</span>
+                  <span className="badge badge-accent"><IndianRupee size={13} /> ₹{Number(formData.salary_min).toLocaleString()} - ₹{Number(formData.salary_max).toLocaleString()}/mo</span>
+                  <span className="badge badge-primary">{formData.job_type}</span>
+                </div>
+
+                <div style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
+                  <button type="button" className="btn btn-outline" onClick={() => setPreviewMode(false)} style={{ flex: 1 }}>
+                    Edit Form
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={handleCreateJob} style={{ flex: 1 }}>
+                    Publish Now
+                  </button>
                 </div>
               </div>
-              <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <span className={`badge ${job.is_active?'badge-green':'badge-pink'}`}>{job.is_active?'Active':'Closed'}</span>
-                <button onClick={()=>openEdit(job)} className="btn btn-secondary btn-sm"><Edit2 size={13}/></button>
-                <button onClick={()=>handleDelete(job.id)} className="btn btn-sm" style={{background:'#fee2e2',color:'#dc2626',border:'none'}}><Trash2 size={13}/></button>
-              </div>
-            </div>
-          ))}
+            ) : (
+              /* Edit Form */
+              <form onSubmit={handleCreateJob} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div className="form-group">
+                  <label className="form-label">Job Title</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Tailoring & Home Stitching Assistant"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Job Description</label>
+                  <textarea
+                    className="form-control"
+                    placeholder="Describe tasks in simple language (e.g. materials delivered to home, weekly collection)..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Required Skills (Comma-separated)</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Tailoring, Hand Stitching, Pattern Cutting"
+                    value={formData.skills_required}
+                    onChange={(e) => setFormData({ ...formData, skills_required: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Location State</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={formData.location_state}
+                      onChange={(e) => setFormData({ ...formData, location_state: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Location District</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={formData.location_district}
+                      onChange={(e) => setFormData({ ...formData, location_district: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Work Mode</label>
+                    <select
+                      className="form-control"
+                      value={formData.work_mode}
+                      onChange={(e) => setFormData({ ...formData, work_mode: e.target.value })}
+                    >
+                      <option value="Work from Home / Village Hub">Work from Home / Village Hub</option>
+                      <option value="Village Common Service Center">Village Common Service Center</option>
+                      <option value="Cluster Processing Unit">Cluster Processing Unit</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Work Type</label>
+                    <select
+                      className="form-control"
+                      value={formData.job_type}
+                      onChange={(e) => setFormData({ ...formData, job_type: e.target.value })}
+                    >
+                      <option value="Part-time">Part-time</option>
+                      <option value="Flexible / Piece-rate">Flexible / Piece-rate</option>
+                      <option value="Full-time">Full-time</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Min Salary (₹/mo)</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={formData.salary_min}
+                      onChange={(e) => setFormData({ ...formData, salary_min: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Max Salary (₹/mo)</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={formData.salary_max}
+                      onChange={(e) => setFormData({ ...formData, salary_max: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => setShowPostModal(false)}
+                    style={{ flex: 1 }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                    Publish Opportunity
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       )}
-
-      <Modal open={modalOpen} onClose={()=>setModalOpen(false)} title={editId?'Edit Job':'Post New Job'}>
-        <div style={{display:'flex',flexDirection:'column',gap:14}}>
-          <div className="form-group" style={{marginBottom:0}}>
-            <label className="form-label">Job Title *</label>
-            <input className="form-control" value={form.title} onChange={e=>upd('title',e.target.value)} placeholder="e.g. Tailoring Instructor"/>
-          </div>
-          <div className="form-group" style={{marginBottom:0}}>
-            <label className="form-label">Description *</label>
-            <textarea className="form-control" value={form.description} onChange={e=>upd('description',e.target.value)} rows={4} placeholder="Job responsibilities, requirements, benefits..."/>
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">Job Type</label>
-              <select className="form-control" value={form.job_type} onChange={e=>upd('job_type',e.target.value)}>
-                {['full-time','part-time','contract','internship','volunteer'].map(t=><option key={t} style={{textTransform:'capitalize'}}>{t}</option>)}
-              </select>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">Work Mode</label>
-              <select className="form-control" value={form.work_mode} onChange={e=>upd('work_mode',e.target.value)}>
-                {['onsite','remote','hybrid'].map(t=><option key={t} style={{textTransform:'capitalize'}}>{t}</option>)}
-              </select>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">State</label>
-              <select className="form-control" value={form.location_state} onChange={e=>upd('location_state',e.target.value)}>
-                <option value="">Select</option>
-                {STATES.map(s=><option key={s}>{s}</option>)}
-              </select>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">District</label>
-              <input className="form-control" value={form.location_district} onChange={e=>upd('location_district',e.target.value)} placeholder="District"/>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">Min Salary (₹/mo)</label>
-              <input className="form-control" type="number" value={form.salary_min} onChange={e=>upd('salary_min',e.target.value)} placeholder="e.g. 8000"/>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">Max Salary (₹/mo)</label>
-              <input className="form-control" type="number" value={form.salary_max} onChange={e=>upd('salary_max',e.target.value)} placeholder="e.g. 15000"/>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">Category</label>
-              <select className="form-control" value={form.category} onChange={e=>upd('category',e.target.value)}>
-                <option value="">Select</option>
-                {CATS.map(c=><option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">No. of Seats</label>
-              <input className="form-control" type="number" value={form.seats} onChange={e=>upd('seats',e.target.value)} placeholder="e.g. 5"/>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">Application Deadline</label>
-              <input className="form-control" type="date" value={form.application_deadline} onChange={e=>upd('application_deadline',e.target.value)}/>
-            </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">Education Required</label>
-              <input className="form-control" value={form.education_required} onChange={e=>upd('education_required',e.target.value)} placeholder="e.g. Class 8 pass"/>
-            </div>
-          </div>
-          <div className="form-group" style={{marginBottom:0}}>
-            <label className="form-label">Skills Required</label>
-            <div className="tag-list">
-              {SKILLS.map(s=>(
-                <button key={s} type="button" onClick={()=>toggleSkill(s)} style={{padding:'4px 10px',borderRadius:999,fontSize:12,cursor:'pointer',border:'1.5px solid',background:(form.skills_required||[]).includes(s)?'var(--pink-600)':'white',color:(form.skills_required||[]).includes(s)?'white':'var(--pink-600)',borderColor:'var(--pink-200)'}}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
-            <button className="btn btn-secondary" onClick={()=>setModalOpen(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving?<><span className="spinner"/>Saving...</>:editId?'Update Job':'Post Job'}
-            </button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }

@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "axios": "^1.6.4",
+    "canvas-confetti": "^1.9.4",
+    "date-fns": "^3.1.0",
+    "framer-motion": "^14.0.0",
+    "lucide-react": "^0.309.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.21.1",
-    "axios": "^1.6.4",
-    "lucide-react": "^0.309.0",
     "react-hot-toast": "^2.4.1",
-    "date-fns": "^3.1.0"
+    "react-router-dom": "^6.21.1"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -20,7 +22,13 @@
     "react-scripts": "5.0.1"
   },
   "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version"]
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version"
+    ]
   }
 }

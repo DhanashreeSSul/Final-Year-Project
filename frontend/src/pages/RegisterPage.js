@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage, LANGUAGES } from '../context/LanguageContext';
 import { authAPI } from '../utils/api';
@@ -24,7 +25,10 @@ import {
   HelpCircle,
   MapPin,
   Lock,
-  Phone
+  Phone,
+  CreditCard,
+  Check,
+  AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -56,9 +60,11 @@ const CAREER_GOALS = [
   'Explore Opportunities'
 ];
 
+const STEP_LABELS = ['Identity', 'Location', 'Skills & Craft', 'Career Goal'];
+
 export default function RegisterPage() {
   const [selectedRole, setSelectedRole] = useState(null); // 'user' or 'org'
-  const [step, setStep] = useState(1); // 1 to 5 for Woman
+  const [step, setStep] = useState(1); // 1 to 4 for Woman
   const navigate = useNavigate();
   const { login } = useAuth();
   const { t } = useLanguage();
@@ -97,6 +103,19 @@ export default function RegisterPage() {
 
   const [loading, setLoading] = useState(false);
 
+  // Aadhaar format & validation
+  const cleanAadhaar = womanData.aadhaar ? String(womanData.aadhaar).replace(/\D/g, '').slice(0, 12) : '';
+  const isAadhaarValid = cleanAadhaar.length === 12;
+
+  const handleAadhaarChange = (val) => {
+    const digits = val.replace(/\D/g, '').slice(0, 12);
+    const parts = [];
+    for (let i = 0; i < digits.length; i += 4) {
+      parts.push(digits.substring(i, i + 4));
+    }
+    setWomanData({ ...womanData, aadhaar: parts.join(' ') });
+  };
+
   const toggleInterest = (interestId) => {
     setWomanData(prev => ({
       ...prev,
@@ -118,13 +137,12 @@ export default function RegisterPage() {
   // Submit Woman Registration
   const handleWomanSubmit = async () => {
     setLoading(true);
-    const cleanAadhaar = womanData.aadhaar ? String(womanData.aadhaar).replace(/\D/g, '') : undefined;
+    const aadhaarPayload = cleanAadhaar || undefined;
     try {
-      // Connect directly to backend PostgreSQL API with AES-256 encrypted Aadhaar
       const res = await authAPI.register({
         name: womanData.name,
         phone: womanData.phone,
-        aadhaar: cleanAadhaar,
+        aadhaar: aadhaarPayload,
         email: womanData.email || undefined,
         password: womanData.password || 'password123',
         role: 'user',
@@ -217,76 +235,106 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="container" style={{ maxWidth: '780px', paddingBottom: '60px' }}>
+    <div className="container" style={{ maxWidth: '820px', paddingBottom: '70px', paddingTop: '20px' }}>
       {/* 1. ROLE SELECTION SCREEN */}
       {!selectedRole && (
-        <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <div className="badge badge-primary" style={{ marginBottom: '14px' }}>
+        <div style={{ textAlign: 'center', marginTop: '10px' }}>
+          <div className="badge badge-primary" style={{ marginBottom: '14px', padding: '6px 16px' }}>
             <Sparkles size={14} /> Join Shakti Platform
           </div>
-          <h1 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '12px' }}>
+          <h1 style={{ fontSize: 'clamp(28px, 4vw, 38px)', fontWeight: '800', marginBottom: '12px' }}>
             How would you like to use the platform?
           </h1>
-          <p style={{ fontSize: '16px', color: 'var(--text-muted)', marginBottom: '36px' }}>
-            Select your account type to access personalized tools and opportunities.
+          <p style={{ fontSize: '16px', color: 'var(--text-muted)', marginBottom: '38px', maxWidth: '580px', margin: '0 auto 38px' }}>
+            Select your account role to access personalized tools, voice guidance, and verified opportunities.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', textAlign: 'left' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', textAlign: 'left' }}>
             {/* Card 1: Woman */}
-            <div
+            <motion.div
+              whileHover={{ y: -6, boxShadow: 'var(--shadow-xl)' }}
               className="card"
               style={{
-                padding: '28px',
+                padding: '32px 28px',
                 cursor: 'pointer',
                 border: '2px solid var(--primary-200)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                transition: 'all 0.2s'
+                borderRadius: '24px',
+                backgroundColor: 'var(--surface)'
               }}
               onClick={() => setSelectedRole('user')}
             >
               <div>
-                <div style={{ width: '56px', height: '56px', borderRadius: '16px', backgroundColor: 'var(--primary-50)', color: 'var(--primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-                  <User size={30} />
+                <div
+                  style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '18px',
+                    background: 'linear-gradient(135deg, #E11D74 0%, #6B2D8B 100%)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '20px',
+                    boxShadow: '0 6px 16px rgba(225, 29, 116, 0.28)'
+                  }}
+                >
+                  <User size={32} />
                 </div>
-                <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-main)' }}>
-                  WOMAN
+                <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
+                  RURAL WOMAN
                 </h2>
                 <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-                  Find local jobs, learn new skills, discover government financial schemes, and get AI career guidance.
+                  Find local jobs, learn new skills, discover government financial schemes, and get explainable AI career guidance.
                 </p>
               </div>
               <button
                 type="button"
-                className="btn btn-primary btn-block"
-                style={{ marginTop: '28px' }}
+                className="btn btn-primary btn-block btn-lg"
+                style={{ marginTop: '32px' }}
                 onClick={(e) => { e.stopPropagation(); setSelectedRole('user'); }}
               >
                 <span>Continue as Woman</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={17} />
               </button>
-            </div>
+            </motion.div>
 
             {/* Card 2: Foundation */}
-            <div
+            <motion.div
+              whileHover={{ y: -6, boxShadow: 'var(--shadow-xl)' }}
               className="card"
               style={{
-                padding: '28px',
+                padding: '32px 28px',
                 cursor: 'pointer',
-                border: '2px solid var(--secondary-100)',
+                border: '2px solid var(--secondary-200)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                transition: 'all 0.2s'
+                borderRadius: '24px',
+                backgroundColor: 'var(--surface)'
               }}
               onClick={() => setSelectedRole('org')}
             >
               <div>
-                <div style={{ width: '56px', height: '56px', borderRadius: '16px', backgroundColor: 'var(--secondary-50)', color: 'var(--secondary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-                  <Building2 size={30} />
+                <div
+                  style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '18px',
+                    background: 'linear-gradient(135deg, #0F9D8A 0%, #6B2D8B 100%)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '20px',
+                    boxShadow: '0 6px 16px rgba(15, 157, 138, 0.28)'
+                  }}
+                >
+                  <Building2 size={32} />
                 </div>
-                <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-main)' }}>
+                <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
                   FOUNDATION / NGO
                 </h2>
                 <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
@@ -295,28 +343,37 @@ export default function RegisterPage() {
               </div>
               <button
                 type="button"
-                className="btn btn-secondary btn-block"
-                style={{ marginTop: '28px' }}
+                className="btn btn-secondary btn-block btn-lg"
+                style={{ marginTop: '32px' }}
                 onClick={(e) => { e.stopPropagation(); setSelectedRole('org'); }}
               >
                 <span>Continue as Foundation</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={17} />
               </button>
-            </div>
+            </motion.div>
           </div>
 
           <div style={{ marginTop: '36px', textAlign: 'center', fontSize: '14px', color: 'var(--text-muted)' }}>
-            Already have an account? <Link to="/login" style={{ fontWeight: '700', color: 'var(--primary-700)' }}>Log In here</Link>
+            Already have an account?{' '}
+            <Link to="/login" style={{ fontWeight: '800', color: 'var(--primary-700)' }}>
+              Sign In here
+            </Link>
           </div>
         </div>
       )}
 
-      {/* 2. WOMAN 5-STEP REGISTRATION WIZARD */}
+      {/* 2. WOMAN 4-STEP WIZARD WITH PROGRESS STEPPER NODES */}
       {selectedRole === 'user' && (
-        <div className="card" style={{ marginTop: '20px' }}>
-          {/* Progress Header */}
-          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
+        <div className="card" style={{ marginTop: '12px', borderRadius: '24px', boxShadow: 'var(--shadow-xl)', overflow: 'hidden' }}>
+          {/* TOP STEPPER WITH 4 NODES & GRADIENT FILL LINE */}
+          <div
+            style={{
+              padding: '24px 30px 20px',
+              borderBottom: '1px solid var(--border)',
+              backgroundColor: 'var(--bg-subtle)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px' }}>
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
@@ -324,332 +381,536 @@ export default function RegisterPage() {
                   if (step > 1) setStep(step - 1);
                   else setSelectedRole(null);
                 }}
-                style={{ padding: 0, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                style={{ padding: '4px 8px', color: 'var(--text-muted)' }}
               >
                 <ArrowLeft size={16} /> Back
               </button>
-              <h2 style={{ fontSize: '20px', fontWeight: '800', marginTop: '6px' }}>
-                Woman Registration
-              </h2>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <span className="badge badge-primary">Step {step} of 5</span>
-              <div style={{ width: '120px', height: '6px', backgroundColor: 'var(--border)', borderRadius: '999px', marginTop: '6px', overflow: 'hidden' }}>
-                <div style={{ width: `${(step / 5) * 100}%`, height: '100%', backgroundColor: 'var(--primary-700)', transition: 'width 0.3s' }} />
+              <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--primary-700)' }}>
+                Step {step} of 4: {STEP_LABELS[step - 1]}
               </div>
+            </div>
+
+            {/* Stepper Graphic with Connecting Gradient Line & Morphing Nodes */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px' }}>
+              {/* Background Inactive Line */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '18px',
+                  left: '36px',
+                  right: '36px',
+                  height: '4px',
+                  backgroundColor: 'var(--border)',
+                  zIndex: 0
+                }}
+              />
+
+              {/* Dynamic Gradient Filled Line */}
+              <motion.div
+                style={{
+                  position: 'absolute',
+                  top: '18px',
+                  left: '36px',
+                  height: '4px',
+                  background: 'var(--primary-gradient)',
+                  zIndex: 1,
+                  borderRadius: '2px'
+                }}
+                animate={{ width: `${((step - 1) / 3) * 88}%` }}
+                transition={{ duration: 0.35, ease: 'easeInOut' }}
+              />
+
+              {/* 4 Stepper Nodes */}
+              {[1, 2, 3, 4].map((nodeIndex) => {
+                const isCompleted = step > nodeIndex;
+                const isCurrent = step === nodeIndex;
+                return (
+                  <div
+                    key={nodeIndex}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      position: 'relative',
+                      zIndex: 2
+                    }}
+                  >
+                    <motion.div
+                      animate={{
+                        scale: isCurrent ? 1.15 : 1,
+                        borderColor: isCurrent || isCompleted ? 'var(--primary-600)' : 'var(--border)'
+                      }}
+                      transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        backgroundColor: isCompleted
+                          ? 'var(--primary-600)'
+                          : isCurrent
+                          ? 'var(--surface)'
+                          : 'var(--bg-subtle)',
+                        color: isCompleted ? '#ffffff' : isCurrent ? 'var(--primary-700)' : 'var(--text-light)',
+                        border: isCurrent ? '3px solid var(--primary-600)' : '2px solid var(--border)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: '800',
+                        fontSize: '14px',
+                        boxShadow: isCurrent ? '0 0 14px rgba(107, 45, 139, 0.35)' : 'none'
+                      }}
+                    >
+                      {isCompleted ? (
+                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}>
+                          <Check size={18} strokeWidth={3} />
+                        </motion.div>
+                      ) : (
+                        nodeIndex
+                      )}
+                    </motion.div>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: isCurrent ? '800' : '600',
+                        color: isCurrent ? 'var(--primary-800)' : 'var(--text-light)',
+                        marginTop: '6px'
+                      }}
+                    >
+                      {STEP_LABELS[nodeIndex - 1]}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          <div className="card-body">
-            {/* STEP 1: BASIC INFORMATION */}
-            {step === 1 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: '700' }}>Basic Information</h3>
-
-                <div className="form-group">
-                  <label className="form-label">Full Name</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. Savitri Devi"
-                    value={womanData.name}
-                    onChange={(e) => setWomanData({ ...womanData, name: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Mobile Number</label>
-                  <input
-                    type="tel"
-                    className="form-control"
-                    placeholder="10-digit mobile number"
-                    value={womanData.phone}
-                    onChange={(e) => setWomanData({ ...womanData, phone: e.target.value })}
-                    required
-                  />
-                  <span className="form-hint">Used for secure login and job notifications.</span>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Aadhaar Number (Optional Verification)</span>
-                    <span style={{ fontSize: '11px', color: 'var(--secondary-700)', fontWeight: '700' }}>AES-256 Encrypted</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="12-digit Aadhaar (e.g. 5678 9012 3458)"
-                    value={womanData.aadhaar}
-                    onChange={(e) => {
-                      const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
-                      const parts = [];
-                      for (let i = 0; i < digits.length; i += 4) {
-                        parts.push(digits.substring(i, i + 4));
-                      }
-                      setWomanData({ ...womanData, aadhaar: parts.join(' ') });
-                    }}
-                  />
-                  <span className="form-hint">Enables instant UIDAI Verhoeff validation for government toolkits and loan subsidies.</span>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Create Password / PIN</label>
-                  <input
-                    type="password"
-                    className="form-control"
-                    placeholder="At least 6 characters or digits"
-                    value={womanData.password}
-                    onChange={(e) => setWomanData({ ...womanData, password: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Preferred Language</label>
-                  <select
-                    className="form-control"
-                    value={womanData.language_pref}
-                    onChange={(e) => setWomanData({ ...womanData, language_pref: e.target.value })}
-                  >
-                    {LANGUAGES.map(l => (
-                      <option key={l.code} value={l.code}>{l.native} ({l.name})</option>
-                    ))}
-                  </select>
-                </div>
-
-                <button
-                  type="button"
-                  className="btn btn-primary btn-block btn-lg"
-                  onClick={() => {
-                    if (!womanData.name || !womanData.phone) {
-                      toast.error('Please enter your name and mobile number');
-                      return;
-                    }
-                    setStep(2);
-                  }}
-                  style={{ marginTop: '12px' }}
+          {/* CARD BODY WITH HORIZONTALLY SLIDING STEPS */}
+          <div className="card-body" style={{ padding: '36px 30px' }}>
+            <AnimatePresence mode="wait">
+              {/* STEP 1: IDENTITY & AADHAAR WITH INLINE VALIDATION */}
+              {step === 1 && (
+                <motion.div
+                  key="step-1"
+                  initial={{ opacity: 0, x: 28 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -28 }}
+                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
                 >
-                  <span>Continue to Location</span>
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            )}
+                  <div>
+                    <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
+                      Personal Identity & Contact
+                    </h3>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                      Used to issue your secured digital beneficiary card.
+                    </p>
+                  </div>
 
-            {/* STEP 2: LOCATION */}
-            {step === 2 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: '700' }}>Your Location</h3>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                  This helps AI match you with nearby village hubs, home-pickup stitching clusters, and local state government schemes.
-                </p>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Full Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. Savitri Devi"
+                      value={womanData.name}
+                      onChange={(e) => setWomanData({ ...womanData, name: e.target.value })}
+                      required
+                    />
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label">State</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={womanData.state}
-                    onChange={(e) => setWomanData({ ...womanData, state: e.target.value })}
-                  />
-                </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Mobile Number</label>
+                    <input
+                      type="tel"
+                      className="form-control"
+                      placeholder="10-digit mobile number"
+                      value={womanData.phone}
+                      onChange={(e) => setWomanData({ ...womanData, phone: e.target.value })}
+                      maxLength={10}
+                      required
+                    />
+                    <span className="form-hint">Used for secure login and local job call notifications.</span>
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label">District</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={womanData.district}
-                    onChange={(e) => setWomanData({ ...womanData, district: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Village / Town / Ward (Optional)</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. Shivpur"
-                    value={womanData.village}
-                    onChange={(e) => setWomanData({ ...womanData, village: e.target.value })}
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  className="btn btn-primary btn-block btn-lg"
-                  onClick={() => setStep(3)}
-                  style={{ marginTop: '12px' }}
-                >
-                  <span>Continue to Interests</span>
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            )}
-
-            {/* STEP 3: VISUAL INTEREST CARDS */}
-            {step === 3 && (
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '6px' }}>
-                  What are you interested in?
-                </h3>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '18px' }}>
-                  Tap the cards that interest you (select all that apply):
-                </p>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-                  {INTEREST_CARDS.map(item => {
-                    const IconComp = item.icon;
-                    const isSelected = womanData.interests.includes(item.id);
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => toggleInterest(item.id)}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '10px',
-                          padding: '16px 12px',
-                          borderRadius: 'var(--radius-md)',
-                          border: isSelected ? '2px solid var(--primary-700)' : '1.5px solid var(--border)',
-                          backgroundColor: isSelected ? 'var(--primary-50)' : '#ffffff',
-                          cursor: 'pointer',
-                          textAlign: 'center',
-                          transition: 'all 0.15s'
-                        }}
-                      >
-                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: isSelected ? 'var(--primary-100)' : 'var(--bg-subtle)', color: isSelected ? 'var(--primary-700)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <IconComp size={20} />
-                        </div>
-                        <span style={{ fontSize: '13px', fontWeight: isSelected ? '700' : '600', color: isSelected ? 'var(--primary-900)' : 'var(--text-main)' }}>
-                          {item.label}
+                  {/* AADHAAR WITH INLINE TEAL CHECK / STATUS */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>12-Digit Aadhaar (Encrypted Checksum)</span>
+                      {cleanAadhaar.length > 0 && (
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            color: isAadhaarValid ? 'var(--teal-600)' : 'var(--accent-600)'
+                          }}
+                        >
+                          {isAadhaarValid ? (
+                            <>
+                              <CheckCircle2 size={13} />
+                              <span>Valid 12 Digits</span>
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle size={13} />
+                              <span>{cleanAadhaar.length}/12 Digits</span>
+                            </>
+                          )}
                         </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <button
-                  type="button"
-                  className="btn btn-primary btn-block btn-lg"
-                  onClick={() => setStep(4)}
-                >
-                  <span>Continue to Skills</span>
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            )}
-
-            {/* STEP 4: SKILLS SELECTION */}
-            {step === 4 && (
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '6px' }}>
-                  What skills do you already have?
-                </h3>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '18px' }}>
-                  Even informal experience from home counts! Tap to select:
-                </p>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '28px' }}>
-                  {SKILL_OPTIONS.map(skill => {
-                    const isSelected = womanData.skills.includes(skill);
-                    return (
-                      <button
-                        key={skill}
-                        type="button"
-                        onClick={() => toggleSkill(skill)}
-                        className={`badge ${isSelected ? 'badge-primary' : 'badge-neutral'}`}
+                      )}
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <CreditCard
+                        size={17}
                         style={{
-                          padding: '10px 16px',
-                          fontSize: '14px',
-                          cursor: 'pointer',
-                          border: isSelected ? '2px solid var(--primary-700)' : '1px solid var(--border)'
+                          position: 'absolute',
+                          left: '16px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          color: isAadhaarValid ? 'var(--teal-600)' : 'var(--text-light)'
                         }}
-                      >
-                        {isSelected && <CheckCircle2 size={16} />}
-                        <span>{skill}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <button
-                  type="button"
-                  className="btn btn-primary btn-block btn-lg"
-                  onClick={() => setStep(5)}
-                >
-                  <span>Continue to Career Goal</span>
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            )}
-
-            {/* STEP 5: CAREER GOAL & CONFIRMATION */}
-            {step === 5 && (
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '6px' }}>
-                  What is your primary goal right now?
-                </h3>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '18px' }}>
-                  This steers your personalized AI recommendation dashboard.
-                </p>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '28px' }}>
-                  {CAREER_GOALS.map(goal => {
-                    const isSelected = womanData.careerGoal === goal;
-                    return (
-                      <button
-                        key={goal}
-                        type="button"
-                        onClick={() => setWomanData({ ...womanData, careerGoal: goal })}
+                      />
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="XXXX XXXX XXXX (e.g. 5678 9012 3458)"
+                        value={womanData.aadhaar}
+                        onChange={(e) => handleAadhaarChange(e.target.value)}
                         style={{
-                          padding: '14px 16px',
-                          borderRadius: 'var(--radius-md)',
-                          border: isSelected ? '2px solid var(--primary-700)' : '1.5px solid var(--border)',
-                          backgroundColor: isSelected ? 'var(--primary-50)' : '#ffffff',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          fontSize: '14px',
-                          fontWeight: isSelected ? '700' : '600',
-                          color: isSelected ? 'var(--primary-900)' : 'var(--text-main)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between'
+                          paddingLeft: '48px',
+                          letterSpacing: '2px',
+                          fontWeight: '700',
+                          fontSize: '15px',
+                          borderColor: isAadhaarValid ? 'var(--teal-500)' : cleanAadhaar.length > 0 ? 'var(--accent-400)' : undefined
                         }}
-                      >
-                        <span>{goal}</span>
-                        {isSelected && <CheckCircle2 size={18} color="var(--primary-700)" />}
-                      </button>
-                    );
-                  })}
-                </div>
+                        maxLength={14}
+                      />
+                    </div>
+                    <span className="form-hint">Enables instant UIDAI Verhoeff validation for government toolkits and loan subsidies.</span>
+                  </div>
 
-                <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '16px', borderRadius: 'var(--radius-md)', marginBottom: '24px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  <ShieldCheck size={16} color="var(--secondary-600)" style={{ display: 'inline', marginRight: '6px' }} />
-                  By submitting, your profile is protected by Shakti’s AES-256 zero-knowledge encryption architecture.
-                </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Create Password / PIN</label>
+                    <input
+                      type="password"
+                      className="form-control"
+                      placeholder="At least 6 characters or digits"
+                      value={womanData.password}
+                      onChange={(e) => setWomanData({ ...womanData, password: e.target.value })}
+                      required
+                    />
+                  </div>
 
-                <button
-                  type="button"
-                  className="btn btn-primary btn-block btn-lg"
-                  onClick={handleWomanSubmit}
-                  disabled={loading}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Preferred Regional Language</label>
+                    <select
+                      className="form-control"
+                      value={womanData.language_pref}
+                      onChange={(e) => setWomanData({ ...womanData, language_pref: e.target.value })}
+                    >
+                      {LANGUAGES.map(l => (
+                        <option key={l.code} value={l.code}>{l.native} ({l.name})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-block btn-lg"
+                    onClick={() => {
+                      if (!womanData.name || !womanData.phone) {
+                        toast.error('Please enter your name and mobile number');
+                        return;
+                      }
+                      setStep(2);
+                    }}
+                    style={{ marginTop: '10px' }}
+                  >
+                    <span>Continue to Location</span>
+                    <ArrowRight size={18} />
+                  </button>
+                </motion.div>
+              )}
+
+              {/* STEP 2: LOCATION */}
+              {step === 2 && (
+                <motion.div
+                  key="step-2"
+                  initial={{ opacity: 0, x: 28 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -28 }}
+                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
                 >
-                  <Sparkles size={18} />
-                  <span>{loading ? 'Creating Your Profile...' : 'Complete Registration & View Matches'}</span>
-                </button>
-              </div>
-            )}
+                  <div>
+                    <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
+                      Your Geographic Location
+                    </h3>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                      Enables AI distance matching for local village hubs, home-pickup stitching clusters, and state welfare schemes.
+                    </p>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">State</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={womanData.state}
+                      onChange={(e) => setWomanData({ ...womanData, state: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">District</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={womanData.district}
+                      onChange={(e) => setWomanData({ ...womanData, district: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Village / Town / Ward (Optional)</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. Shivpur Village"
+                      value={womanData.village}
+                      onChange={(e) => setWomanData({ ...womanData, village: e.target.value })}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-block btn-lg"
+                    onClick={() => setStep(3)}
+                    style={{ marginTop: '10px' }}
+                  >
+                    <span>Continue to Skills & Crafts</span>
+                    <ArrowRight size={18} />
+                  </button>
+                </motion.div>
+              )}
+
+              {/* STEP 3: SKILLS & CRAFT TAG CLOUD WITH SQUISH-SPRING & COUNT BADGE */}
+              {step === 3 && (
+                <motion.div
+                  key="step-3"
+                  initial={{ opacity: 0, x: 28 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -28 }}
+                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
+                >
+                  {/* Vocational Interests Section */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <h3 style={{ fontSize: '19px', fontWeight: '800', color: 'var(--text-main)' }}>
+                        What crafts or work interest you?
+                      </h3>
+                      <span className="badge badge-primary">
+                        {womanData.interests.length} Selected
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '14px' }}>
+                      Tap the cards that interest you (select all that apply):
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px' }}>
+                      {INTEREST_CARDS.map(item => {
+                        const IconComp = item.icon;
+                        const isSelected = womanData.interests.includes(item.id);
+                        return (
+                          <motion.button
+                            key={item.id}
+                            type="button"
+                            whileTap={{ scale: 0.94 }}
+                            onClick={() => toggleInterest(item.id)}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '8px',
+                              padding: '14px 10px',
+                              borderRadius: 'var(--radius-md)',
+                              border: isSelected ? '2px solid var(--primary-600)' : '1.5px solid var(--border)',
+                              backgroundColor: isSelected ? 'var(--primary-50)' : 'var(--surface)',
+                              boxShadow: isSelected ? '0 0 12px rgba(107, 45, 139, 0.16)' : 'none',
+                              cursor: 'pointer',
+                              textAlign: 'center',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '50%',
+                                backgroundColor: isSelected ? 'var(--primary-gradient)' : 'var(--bg-subtle)',
+                                color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              <IconComp size={18} />
+                            </div>
+                            <span style={{ fontSize: '12px', fontWeight: isSelected ? '800' : '600', color: isSelected ? 'var(--primary-900)' : 'var(--text-main)' }}>
+                              {item.label}
+                            </span>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Skills Tag Cloud with Squish-Spring */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <h3 style={{ fontSize: '19px', fontWeight: '800', color: 'var(--text-main)' }}>
+                        Existing Practical Skills
+                      </h3>
+                      <span className="badge badge-accent">
+                        {womanData.skills.length} Selected
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '14px' }}>
+                      Informal home experience counts! Tap to toggle tags:
+                    </p>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {SKILL_OPTIONS.map(skill => {
+                        const isSelected = womanData.skills.includes(skill);
+                        return (
+                          <motion.button
+                            key={skill}
+                            type="button"
+                            whileTap={{ scale: 0.94 }}
+                            onClick={() => toggleSkill(skill)}
+                            className={`badge ${isSelected ? 'badge-primary' : 'badge-neutral'}`}
+                            style={{
+                              padding: '9px 16px',
+                              fontSize: '13px',
+                              cursor: 'pointer',
+                              border: isSelected ? '2px solid var(--primary-600)' : '1px solid var(--border)',
+                              borderRadius: 'var(--radius-full)',
+                              boxShadow: isSelected ? '0 2px 8px rgba(107, 45, 139, 0.2)' : 'none'
+                            }}
+                          >
+                            {isSelected && <CheckCircle2 size={15} color="var(--primary-700)" />}
+                            <span>{skill}</span>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-block btn-lg"
+                    onClick={() => setStep(4)}
+                    style={{ marginTop: '8px' }}
+                  >
+                    <span>Continue to Career Goal</span>
+                    <ArrowRight size={18} />
+                  </button>
+                </motion.div>
+              )}
+
+              {/* STEP 4: CAREER GOAL & CONFIRMATION */}
+              {step === 4 && (
+                <motion.div
+                  key="step-4"
+                  initial={{ opacity: 0, x: 28 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -28 }}
+                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}
+                >
+                  <div>
+                    <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
+                      What is your primary goal right now?
+                    </h3>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                      This steers your personalized AI recommendation engine and priority ranking.
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                    {CAREER_GOALS.map(goal => {
+                      const isSelected = womanData.careerGoal === goal;
+                      return (
+                        <motion.button
+                          key={goal}
+                          type="button"
+                          whileTap={{ scale: 0.96 }}
+                          onClick={() => setWomanData({ ...womanData, careerGoal: goal })}
+                          style={{
+                            padding: '16px 18px',
+                            borderRadius: 'var(--radius-md)',
+                            border: isSelected ? '2px solid var(--primary-600)' : '1.5px solid var(--border)',
+                            backgroundColor: isSelected ? 'var(--primary-50)' : 'var(--surface)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            fontSize: '14px',
+                            fontWeight: isSelected ? '800' : '600',
+                            color: isSelected ? 'var(--primary-900)' : 'var(--text-main)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            boxShadow: isSelected ? '0 0 12px rgba(107, 45, 139, 0.18)' : 'none'
+                          }}
+                        >
+                          <span>{goal}</span>
+                          {isSelected && <CheckCircle2 size={18} color="var(--primary-700)" />}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Privacy & Encryption Assurance Callout */}
+                  <div
+                    style={{
+                      backgroundColor: 'var(--teal-50)',
+                      border: '1px solid var(--teal-100)',
+                      padding: '16px',
+                      borderRadius: 'var(--radius-md)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      fontSize: '13px',
+                      color: 'var(--teal-900)'
+                    }}
+                  >
+                    <ShieldCheck size={20} color="var(--teal-600)" />
+                    <span>Your profile is protected by Shakti’s AES-256 zero-knowledge encryption and UIDAI Verhoeff validation.</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-block btn-lg"
+                    onClick={handleWomanSubmit}
+                    disabled={loading}
+                    style={{ marginTop: '8px' }}
+                  >
+                    <Sparkles size={18} />
+                    <span>{loading ? 'Creating Your AI Profile...' : 'Complete Registration & View Matches'}</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       )}
 
       {/* 3. FOUNDATION / NGO REGISTRATION FORM */}
       {selectedRole === 'org' && (
-        <div className="card" style={{ marginTop: '20px' }}>
+        <div className="card" style={{ marginTop: '12px', borderRadius: '24px', boxShadow: 'var(--shadow-xl)' }}>
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <button
@@ -661,15 +922,15 @@ export default function RegisterPage() {
                 <ArrowLeft size={16} /> Back
               </button>
               <h2 style={{ fontSize: '20px', fontWeight: '800', marginTop: '6px' }}>
-                Foundation / NGO Registration
+                Foundation / NGO Partner Registration
               </h2>
             </div>
-            <span className="badge badge-secondary">Partner Account</span>
+            <span className="badge badge-secondary">Verified Partner</span>
           </div>
 
-          <div className="card-body">
-            <form onSubmit={handleFoundationSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="form-group">
+          <div className="card-body" style={{ padding: '36px 30px' }}>
+            <form onSubmit={handleFoundationSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Organization Name</label>
                 <input
                   type="text"
@@ -681,7 +942,32 @@ export default function RegisterPage() {
                 />
               </div>
 
-              <div className="form-group">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Official Mobile Number</label>
+                <input
+                  type="tel"
+                  className="form-control"
+                  placeholder="10-digit mobile number"
+                  value={foundationData.phone}
+                  onChange={(e) => setFoundationData({ ...foundationData, phone: e.target.value })}
+                  maxLength={10}
+                  required
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Official Email</label>
+                <input
+                  type="email"
+                  className="form-control"
+                  placeholder="contact@foundation.org"
+                  value={foundationData.email}
+                  onChange={(e) => setFoundationData({ ...foundationData, email: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Organization Type</label>
                 <select
                   className="form-control"
@@ -690,64 +976,38 @@ export default function RegisterPage() {
                 >
                   <option value="Non-Governmental Organization (NGO)">Non-Governmental Organization (NGO)</option>
                   <option value="Self-Help Group Federation (SHG)">Self-Help Group Federation (SHG)</option>
-                  <option value="Skill Development Centre (NSDC/PMKVY)">Skill Development Centre (NSDC/PMKVY)</option>
-                  <option value="Social Enterprise / Artisan Collective">Social Enterprise / Artisan Collective</option>
                   <option value="CSR Foundation">CSR Foundation</option>
+                  <option value="Vocational Training Institute">Vocational Training Institute</option>
+                  <option value="Rural Cooperative">Rural Cooperative</option>
                 </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label">Official Mobile Number</label>
-                  <input
-                    type="tel"
-                    className="form-control"
-                    placeholder="10-digit number"
-                    value={foundationData.phone}
-                    onChange={(e) => setFoundationData({ ...foundationData, phone: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Official Email</label>
-                  <input
-                    type="email"
-                    className="form-control"
-                    placeholder="contact@org.org"
-                    value={foundationData.email}
-                    onChange={(e) => setFoundationData({ ...foundationData, email: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">NGO Registration / Darpan ID (Optional)</label>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">NGO Darpan / Registration Number (Optional)</label>
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="e.g. NGO/MH/2018/009182"
+                  placeholder="e.g. MH/2021/0291823"
                   value={foundationData.registration_number}
                   onChange={(e) => setFoundationData({ ...foundationData, registration_number: e.target.value })}
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label">Operating State</label>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Operational State & District</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <input
                     type="text"
                     className="form-control"
+                    placeholder="State"
                     value={foundationData.state}
                     onChange={(e) => setFoundationData({ ...foundationData, state: e.target.value })}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Primary Operating District</label>
                   <input
                     type="text"
                     className="form-control"
+                    placeholder="District"
                     value={foundationData.district}
                     onChange={(e) => setFoundationData({ ...foundationData, district: e.target.value })}
                     required
@@ -755,12 +1015,12 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Password</label>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Create Portal Password</label>
                 <input
                   type="password"
                   className="form-control"
-                  placeholder="Create strong password"
+                  placeholder="At least 6 characters"
                   value={foundationData.password}
                   onChange={(e) => setFoundationData({ ...foundationData, password: e.target.value })}
                   required
@@ -771,10 +1031,10 @@ export default function RegisterPage() {
                 type="submit"
                 className="btn btn-secondary btn-block btn-lg"
                 disabled={loading}
-                style={{ marginTop: '12px' }}
+                style={{ marginTop: '10px' }}
               >
-                <Building2 size={18} />
-                <span>{loading ? 'Creating Foundation Account...' : 'Register Foundation & Access Portal'}</span>
+                <span>{loading ? 'Registering Foundation...' : 'Register as Foundation / NGO'}</span>
+                <ArrowRight size={18} />
               </button>
             </form>
           </div>

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../utils/api';
 import { DEMO_USERS } from '../utils/demoData';
 import {
   Lock,
+  Unlock,
   Phone,
   KeyRound,
   ShieldCheck,
@@ -14,7 +16,8 @@ import {
   Sparkles,
   CreditCard,
   CheckCircle2,
-  AlertCircle
+  Quote,
+  Check
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -38,6 +41,11 @@ export default function LoginPage() {
     }
     return parts.join(' ');
   };
+
+  const cleanAadhaarDigits = aadhaar.replace(/\D/g, '');
+  const isAadhaarValid = cleanAadhaarDigits.length === 12;
+  const isPasswordValid = password.length >= 6;
+  const isPhoneValid = phone.replace(/\D/g, '').slice(-10).length === 10;
 
   const handleSendOTP = async (targetPhone) => {
     const num = targetPhone || phone;
@@ -66,17 +74,15 @@ export default function LoginPage() {
   // 1. Aadhaar-Based Login Handler
   const handleAadhaarLogin = async (e) => {
     e.preventDefault();
-    const cleanAadhaar = String(aadhaar).replace(/\D/g, '');
-    if (cleanAadhaar.length !== 12) {
+    if (cleanAadhaarDigits.length !== 12) {
       toast.error('Aadhaar must be exactly 12 digits');
       return;
     }
 
     setLoading(true);
     try {
-      // Connects directly to backend PostgreSQL authController (AES-256-GCM + Verhoeff)
       const res = await authAPI.login({
-        aadhaar: cleanAadhaar,
+        aadhaar: cleanAadhaarDigits,
         password: password || 'password123'
       });
 
@@ -169,127 +175,303 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="container" style={{ maxWidth: '520px', paddingBottom: '60px' }}>
-      <div className="page-header" style={{ textAlign: 'center', marginBottom: '28px' }}>
-        <div className="badge badge-primary" style={{ marginBottom: '10px' }}>
-          <ShieldCheck size={14} /> Secured Verification Portal
+    <div className="container" style={{ maxWidth: '1100px', paddingBottom: '70px', paddingTop: '30px' }}>
+      {/* 2.4 SPLIT LAYOUT: LEFT BRAND PANEL + RIGHT GLASS FORM */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+          gap: '36px',
+          alignItems: 'stretch'
+        }}
+      >
+        {/* LEFT BRAND PANEL */}
+        <div
+          style={{
+            background: 'linear-gradient(145deg, #3B1652 0%, #1E0C2B 100%)',
+            borderRadius: '24px',
+            padding: '44px 36px',
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            position: 'relative',
+            overflow: 'hidden',
+            boxShadow: 'var(--shadow-xl)',
+            border: '1px solid rgba(107, 45, 139, 0.4)'
+          }}
+        >
+          {/* Ambient Decorative Shapes */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '-40px',
+              right: '-40px',
+              width: '200px',
+              height: '200px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(225, 29, 116, 0.3) 0%, transparent 70%)',
+              pointerEvents: 'none'
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '-30px',
+              left: '-30px',
+              width: '220px',
+              height: '220px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(245, 158, 11, 0.25) 0%, transparent 70%)',
+              pointerEvents: 'none'
+            }}
+          />
+
+          <div>
+            <div
+              className="badge"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                color: '#ffffff',
+                marginBottom: '20px',
+                padding: '6px 14px'
+              }}
+            >
+              <Sparkles size={14} />
+              <span>AI Empowerment Gateway</span>
+            </div>
+
+            <h2
+              style={{
+                fontSize: 'clamp(28px, 3.5vw, 36px)',
+                fontWeight: '800',
+                lineHeight: '1.2',
+                color: '#ffffff',
+                marginBottom: '16px'
+              }}
+            >
+              Step into your career with dignity.
+            </h2>
+
+            <p style={{ fontSize: '15px', color: '#D6C8E6', lineHeight: '1.6', marginBottom: '32px' }}>
+              Access AI-matched tailoring, handicrafts, organic food packing, and certified government programs built for your family's future.
+            </p>
+
+            {/* Testimonial Quote */}
+            <div
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '22px',
+                position: 'relative'
+              }}
+            >
+              <Quote size={24} color="var(--secondary-400)" style={{ marginBottom: '8px', opacity: 0.8 }} />
+              <p style={{ fontSize: '14px', fontStyle: 'italic', color: '#FDF8F5', lineHeight: '1.6' }}>
+                "With Shakti, I didn't need to read complicated forms. I spoke in Hindi, verified my skill in sewing, and received my first toolkit and home-based orders within 3 weeks."
+              </p>
+              <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: 'var(--secondary-gradient)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '800',
+                    fontSize: '13px'
+                  }}
+                >
+                  SD
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff' }}>Savitri Devi</div>
+                  <div style={{ fontSize: '11px', color: 'var(--secondary-300)' }}>Rural Artisan • Varanasi Cluster</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* UIDAI / AES-256 GCM Security Stamp */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '12px',
+              color: '#BFAED4',
+              borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+              paddingTop: '20px',
+              marginTop: '32px'
+            }}
+          >
+            <ShieldCheck size={18} color="var(--teal-400)" />
+            <span>Official UIDAI Verhoeff Checksum & 256-Bit Ciphertext Protection</span>
+          </div>
         </div>
-        <h1 className="page-title">Sign In to Shakti</h1>
-        <p className="page-subtitle" style={{ margin: '6px auto 0' }}>
-          Access your personalized AI recommendations and verified opportunities.
-        </p>
-      </div>
 
-      <div className="card">
-        {/* 3 Login Tabs */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderBottom: '1px solid var(--border)' }}>
-          <button
-            type="button"
-            onClick={() => setLoginMode('aadhaar')}
+        {/* RIGHT GLASS FORM CARD */}
+        <div
+          className="card"
+          style={{
+            backgroundColor: 'var(--surface)',
+            borderRadius: '24px',
+            border: '1.5px solid var(--border)',
+            boxShadow: 'var(--shadow-xl)',
+            padding: '36px 30px',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <div style={{ marginBottom: '24px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '6px' }}>
+              Sign In to Shakti
+            </h1>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+              Choose your preferred secure login method below.
+            </p>
+          </div>
+
+          {/* TAB SWITCHER WITH FRAMER-MOTION SLIDING PILL */}
+          <div
             style={{
-              padding: '14px 8px',
-              border: 'none',
-              background: loginMode === 'aadhaar' ? 'var(--primary-50)' : '#ffffff',
-              color: loginMode === 'aadhaar' ? 'var(--primary-800)' : 'var(--text-muted)',
-              fontWeight: '700',
-              fontSize: '13px',
-              cursor: 'pointer',
-              borderBottom: loginMode === 'aadhaar' ? '2px solid var(--primary-700)' : 'none',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px'
+              backgroundColor: 'var(--bg-subtle)',
+              borderRadius: 'var(--radius-full)',
+              padding: '4px',
+              marginBottom: '26px',
+              border: '1px solid var(--border)',
+              position: 'relative'
             }}
           >
-            <CreditCard size={14} />
-            <span>Aadhaar ID</span>
-          </button>
+            {[
+              { id: 'aadhaar', label: 'Aadhaar ID', icon: CreditCard },
+              { id: 'password', label: 'Password', icon: Phone },
+              { id: 'otp', label: 'Mobile OTP', icon: KeyRound }
+            ].map((tab) => {
+              const active = loginMode === tab.id;
+              const IconComp = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setLoginMode(tab.id)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 8px',
+                    borderRadius: 'var(--radius-full)',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: active ? '800' : '600',
+                    color: active ? '#ffffff' : 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    position: 'relative',
+                    zIndex: 1,
+                    transition: 'color 0.15s ease'
+                  }}
+                >
+                  {active && (
+                    <motion.div
+                      layoutId="login-tab-pill"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'var(--primary-gradient)',
+                        borderRadius: 'var(--radius-full)',
+                        boxShadow: '0 4px 12px rgba(107, 45, 139, 0.3)',
+                        zIndex: -1
+                      }}
+                      transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                    />
+                  )}
+                  <IconComp size={14} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-          <button
-            type="button"
-            onClick={() => setLoginMode('password')}
-            style={{
-              padding: '14px 8px',
-              border: 'none',
-              background: loginMode === 'password' ? 'var(--primary-50)' : '#ffffff',
-              color: loginMode === 'password' ? 'var(--primary-800)' : 'var(--text-muted)',
-              fontWeight: '700',
-              fontSize: '13px',
-              cursor: 'pointer',
-              borderBottom: loginMode === 'password' ? '2px solid var(--primary-700)' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px'
-            }}
-          >
-            <Phone size={14} />
-            <span>Password</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setLoginMode('otp')}
-            style={{
-              padding: '14px 8px',
-              border: 'none',
-              background: loginMode === 'otp' ? 'var(--primary-50)' : '#ffffff',
-              color: loginMode === 'otp' ? 'var(--primary-800)' : 'var(--text-muted)',
-              fontWeight: '700',
-              fontSize: '13px',
-              cursor: 'pointer',
-              borderBottom: loginMode === 'otp' ? '2px solid var(--primary-700)' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px'
-            }}
-          >
-            <KeyRound size={14} />
-            <span>Mobile OTP</span>
-          </button>
-        </div>
-
-        <div className="card-body">
           {/* TAB 1: AADHAAR LOGIN */}
           {loginMode === 'aadhaar' && (
-            <form onSubmit={handleAadhaarLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ backgroundColor: 'var(--secondary-50)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--secondary-100)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--secondary-700)' }}>
-                <ShieldCheck size={16} />
-                <span>UIDAI Verhoeff Checksum & 256-Bit Encrypted</span>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">12-Digit Aadhaar Number</label>
+            <form onSubmit={handleAadhaarLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>12-Digit Aadhaar Number</span>
+                  <span style={{ fontSize: '11px', color: isAadhaarValid ? 'var(--teal-600)' : 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    {isAadhaarValid ? <Check size={12} strokeWidth={3} /> : null}
+                    {cleanAadhaarDigits.length}/12 Digits
+                  </span>
+                </label>
                 <div style={{ position: 'relative' }}>
-                  <CreditCard size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+                  <CreditCard
+                    size={17}
+                    style={{
+                      position: 'absolute',
+                      left: '16px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: isAadhaarValid ? 'var(--teal-600)' : 'var(--text-light)'
+                    }}
+                  />
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="XXXX XXXX XXXX (e.g. 5678 9012 3458)"
+                    placeholder="XXXX XXXX XXXX"
                     value={aadhaar}
                     onChange={(e) => setAadhaar(formatAadhaarInput(e.target.value))}
-                    style={{ paddingLeft: '42px', letterSpacing: '2px', fontWeight: '600' }}
+                    style={{
+                      paddingLeft: '48px',
+                      paddingRight: '44px',
+                      letterSpacing: '2px',
+                      fontWeight: '700',
+                      fontSize: '16px',
+                      borderColor: isAadhaarValid ? 'var(--teal-500)' : undefined
+                    }}
                     maxLength={14}
                     required
                   />
+                  {/* Animated Lock Click on Valid Input */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: '16px',
+                      top: '50%',
+                      transform: 'translateY(-50%)'
+                    }}
+                  >
+                    {isAadhaarValid ? (
+                      <motion.div initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}>
+                        <Lock size={16} color="var(--teal-600)" />
+                      </motion.div>
+                    ) : (
+                      <Unlock size={16} color="var(--text-light)" />
+                    )}
+                  </div>
                 </div>
-                <span className="form-hint">
-                  Demo Aadhaar for Savitri Devi: <strong>5678 9012 3458</strong>
-                </span>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Password / PIN</label>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">PIN / Password</label>
                 <div style={{ position: 'relative' }}>
-                  <Lock size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+                  <KeyRound size={17} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
                   <input
                     type="password"
                     className="form-control"
-                    placeholder="Enter password (default: password123)"
+                    placeholder="Enter your security PIN or password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    style={{ paddingLeft: '42px' }}
+                    style={{ paddingLeft: '48px' }}
                     required
                   />
                 </div>
@@ -299,98 +481,98 @@ export default function LoginPage() {
                 type="submit"
                 className="btn btn-primary btn-block btn-lg"
                 disabled={loading}
-                style={{ marginTop: '8px' }}
+                style={{ marginTop: '4px' }}
               >
-                <span>{loading ? 'Authenticating with Aadhaar...' : 'Sign In with Aadhaar'}</span>
-                <ArrowRight size={18} />
+                {loading ? 'Verifying with UIDAI...' : 'Sign In with Aadhaar'}
+                <ArrowRight size={17} />
               </button>
             </form>
           )}
 
-          {/* TAB 2: MOBILE + PASSWORD */}
+          {/* TAB 2: MOBILE + PASSWORD LOGIN */}
           {loginMode === 'password' && (
-            <form onSubmit={handlePasswordLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="form-group">
-                <label className="form-label">Registered Mobile Number</label>
-                <div style={{ position: 'relative' }}>
-                  <Phone size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
-                  <input
-                    type="tel"
-                    className="form-control"
-                    placeholder="10-digit mobile number"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    style={{ paddingLeft: '42px' }}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Password / PIN</label>
-                <div style={{ position: 'relative' }}>
-                  <Lock size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
-                  <input
-                    type="password"
-                    className="form-control"
-                    placeholder="Enter your password or PIN"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    style={{ paddingLeft: '42px' }}
-                    required
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="btn btn-primary btn-block btn-lg"
-                disabled={loading}
-                style={{ marginTop: '8px' }}
-              >
-                <span>{loading ? 'Signing in...' : 'Sign In with Password'}</span>
-                <ArrowRight size={18} />
-              </button>
-            </form>
-          )}
-
-          {/* TAB 3: MOBILE OTP */}
-          {loginMode === 'otp' && (
-            <form onSubmit={handleOtpLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="form-group">
+            <form onSubmit={handlePasswordLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Mobile Number</label>
                 <div style={{ position: 'relative' }}>
-                  <Phone size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+                  <Phone size={17} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
                   <input
                     type="tel"
                     className="form-control"
                     placeholder="10-digit mobile number"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    style={{ paddingLeft: '42px' }}
-                    disabled={otpSent}
+                    style={{ paddingLeft: '48px' }}
+                    maxLength={10}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Password</label>
+                <div style={{ position: 'relative' }}>
+                  <KeyRound size={17} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    style={{ paddingLeft: '48px' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary btn-block btn-lg"
+                disabled={loading}
+                style={{ marginTop: '4px' }}
+              >
+                {loading ? 'Authenticating...' : 'Sign In'}
+                <ArrowRight size={17} />
+              </button>
+            </form>
+          )}
+
+          {/* TAB 3: MOBILE + OTP LOGIN */}
+          {loginMode === 'otp' && (
+            <form onSubmit={handleOtpLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Registered Mobile Number</label>
+                <div style={{ position: 'relative' }}>
+                  <Phone size={17} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+                  <input
+                    type="tel"
+                    className="form-control"
+                    placeholder="10-digit mobile number"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    style={{ paddingLeft: '48px' }}
+                    maxLength={10}
                     required
                   />
                 </div>
               </div>
 
               {otpSent && (
-                <div className="form-group">
+                <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Enter 6-Digit OTP</label>
                   <div style={{ position: 'relative' }}>
-                    <KeyRound size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+                    <KeyRound size={17} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
                     <input
                       type="text"
                       className="form-control"
                       placeholder="e.g. 123456"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value)}
-                      style={{ paddingLeft: '42px', letterSpacing: '4px', fontSize: '18px', fontWeight: '700' }}
+                      style={{ paddingLeft: '48px', letterSpacing: '4px', fontWeight: '800' }}
                       maxLength={6}
                       required
                     />
                   </div>
-                  <span className="form-hint">OTP valid for 10 minutes.</span>
                 </div>
               )}
 
@@ -398,45 +580,85 @@ export default function LoginPage() {
                 type="submit"
                 className="btn btn-primary btn-block btn-lg"
                 disabled={loading}
-                style={{ marginTop: '8px' }}
+                style={{ marginTop: '4px' }}
               >
-                {otpSent ? 'Verify OTP & Enter' : 'Send One-Time Password'}
+                {loading ? 'Processing...' : (otpSent ? 'Verify OTP & Log In' : 'Send One-Time Password')}
+                <ArrowRight size={17} />
               </button>
             </form>
           )}
 
-          {/* Quick Evaluation Presets */}
-          <div style={{ marginTop: '28px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
-            <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', textAlign: 'center' }}>
-              Quick Academic Presentation Presets
+          {/* TAPPABLE DEMO CREDENTIAL CHIPS WITH QUICK RIPPLE */}
+          <div
+            style={{
+              marginTop: '28px',
+              paddingTop: '20px',
+              borderTop: '1px solid var(--border)'
+            }}
+          >
+            <div
+              style={{
+                fontSize: '11px',
+                fontWeight: '800',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '10px'
+              }}
+            >
+              Instant 1-Tap Demo Access:
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <button
+              <motion.button
                 type="button"
-                className="btn btn-outline btn-sm"
+                whileTap={{ scale: 0.95 }}
                 onClick={() => fillDemoAccount('woman')}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
-              >
-                <User size={14} color="var(--primary-700)" />
-                <span>Savitri Devi (Aadhaar: 3458)</span>
-              </button>
-
-              <button
-                type="button"
                 className="btn btn-outline btn-sm"
-                onClick={() => fillDemoAccount('foundation')}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+                style={{
+                  justifyContent: 'flex-start',
+                  padding: '10px 12px',
+                  backgroundColor: 'var(--primary-50)',
+                  borderColor: 'var(--primary-200)',
+                  borderRadius: 'var(--radius-md)'
+                }}
               >
-                <Building2 size={14} color="var(--secondary-600)" />
-                <span>Mahila Vikas (NGO)</span>
-              </button>
+                <User size={15} color="var(--primary-700)" />
+                <div style={{ textAlign: 'left', overflow: 'hidden' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--primary-900)' }}>Savitri Devi</div>
+                  <div style={{ fontSize: '10px', color: 'var(--primary-700)' }}>Rural Woman</div>
+                </div>
+              </motion.button>
+
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.95 }}
+                onClick={() => fillDemoAccount('foundation')}
+                className="btn btn-outline btn-sm"
+                style={{
+                  justifyContent: 'flex-start',
+                  padding: '10px 12px',
+                  backgroundColor: 'var(--secondary-50)',
+                  borderColor: 'var(--secondary-200)',
+                  borderRadius: 'var(--radius-md)'
+                }}
+              >
+                <Building2 size={15} color="var(--secondary-600)" />
+                <div style={{ textAlign: 'left', overflow: 'hidden' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--secondary-900)' }}>Mahila Vikas</div>
+                  <div style={{ fontSize: '10px', color: 'var(--secondary-700)' }}>NGO Foundation</div>
+                </div>
+              </motion.button>
             </div>
           </div>
-        </div>
 
-        <div className="card-footer" style={{ textAlign: 'center', fontSize: '14px' }}>
-          New to Shakti? <Link to="/register" style={{ fontWeight: '700', color: 'var(--primary-700)' }}>Create an account</Link>
+          {/* Registration link */}
+          <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: 'var(--text-muted)' }}>
+            Don't have an account yet?{' '}
+            <Link to="/register" style={{ fontWeight: '800', color: 'var(--primary-700)' }}>
+              Create an Account
+            </Link>
+          </div>
         </div>
       </div>
     </div>
